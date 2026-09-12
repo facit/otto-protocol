@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "game": "swu",
+  "displayName": "Star Wars: Unlimited",
+  "definitionVersion": 1,
+  "canonicalSource": {
+    "name": "Star Wars: Unlimited official card database",
+    "url": "https://www.starwarsunlimited.com/cards"
+  },
+  "identifier": {
+    "fields": [
+      { "name": "setCode", "type": "string", "case": "upper" },
+      { "name": "collectorNumber", "type": "integer", "zeroPad": 3 },
+      { "name": "printedTotal", "type": "integer", "optional": true },
+      { "name": "finish", "type": "string", "case": "lower" },
+      { "name": "variantKey", "type": "string", "case": "lower", "optional": true }
+    ]
+  },
+  "finishes": ["standard", "foil"],
+  "sets": [
+    { "code": "SOR", "name": "Spark of Rebellion", "releaseOrder": 1 },
+    { "code": "SHD", "name": "Shadows of the Galaxy", "releaseOrder": 2 },
+    { "code": "TWI", "name": "Twilight of the Republic", "releaseOrder": 3 },
+    { "code": "JTL", "name": "Jump to Lightspeed", "releaseOrder": 4 },
+    { "code": "JTLP", "name": "Jump to Lightspeed — Weekly Play", "releaseOrder": 4 },
+    { "code": "LOF", "name": "Legacy of the Force", "releaseOrder": 5 },
+    { "code": "LOFP", "name": "Legacy of the Force — Weekly Play", "releaseOrder": 5 },
+    { "code": "SEC", "name": "Secrets of Power", "releaseOrder": 6 },
+    { "code": "SECP", "name": "Secrets of Power — Weekly Play", "releaseOrder": 6 },
+    { "code": "LAW", "name": "A Lawless Time", "releaseOrder": 7 },
+    { "code": "LAWP", "name": "A Lawless Time — Weekly Play", "releaseOrder": 7 },
+    { "code": "ASH", "name": "Ashes of the Empire", "releaseOrder": 8 }
+  ],
+  "notes": [
+    "Treatments (Hyperspace, Showcase, etc.) are not identifier fields — the canonical source already assigns each a distinct collectorNumber, so they're captured implicitly. Treatment names are display metadata only, never matched on.",
+    "printedTotal is present on mainline cards in every set, and on SOR/SHD/TWI-era weekly-play promos (which share their mainline set's code and need the total to disambiguate from it, e.g. '07/20' vs '07/262'). It is absent on JTLP/LOFP/SECP/LAWP-style weekly-play promos, which have their own dedicated set code and no longer need a total to disambiguate.",
+    "'-P' weekly-play set names above ('Jump to Lightspeed — Weekly Play', etc.) are descriptive placeholders, not verified official branding — confirm against canonicalSource before treating them as authoritative.",
+    "finish is always present, even on sets where a foil printing shares its collectorNumber with the non-foil version (SOR/SHD/TWI) rather than having its own distinct number (later sets) — kept uniform so no implementer needs to know per-set which numbering rule applies.",
+    "knownCollisions is intentionally empty. No verified real collision is currently known for this game; see SPEC.md 4.5 for the shape to use if/when one is found."
+  ]
+}

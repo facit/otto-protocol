@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-tcg-trade-protocol/schemas/game-definition/v1",
+  "title": "Open TCG Trade Protocol — Game Definition",
+  "description": "Schema every per-game definition file must validate against. See ../SPEC.md section 4 for the full narrative explanation. Intentionally does not set additionalProperties: false anywhere, so the format can grow without invalidating existing files (see SPEC.md section 4.6).",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "game",
+    "displayName",
+    "definitionVersion",
+    "canonicalSource",
+    "identifier",
+    "finishes",
+    "sets"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "description": "Version of this meta-schema, not of the per-game definition file (see definitionVersion)."
+    },
+    "game": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]{2,16}$",
+      "description": "Stable lowercase identifier. Used to derive this game's BLE service UUID (SPEC.md 3.1) — changing it after publication changes the service UUID, which breaks discovery for anyone on an older definition file."
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "definitionVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Increment on any change. HARD RULE: an identifier already constructible under an older version must resolve identically under a newer one. Additive only — never redefine or reuse an already-assigned meaning."
+    },
+    "canonicalSource": {
+      "type": "object",
+      "required": ["name", "url"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "url": { "type": "string", "format": "uri" }
+      },
+      "description": "The authority this file defers to for what cards/sets exist. Disputes about correctness are resolved by checking here, not by discussion."
+    },
+    "identifier": {
+      "type": "object",
+      "required": ["fields"],
+      "properties": {
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/identifierField" }
+        }
+      },
+      "description": "Card identity is represented as a plain JSON object keyed by these field names (SPEC.md 4.3) — there is no separate compact string encoding."
+    },
+    "finishes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+      "description": "Closed vocabulary for physical finish. Not free text — a value not listed here is not a valid finish for this game."
+    },
+    "sets": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/setEntry" }
+    },
+    "knownCollisions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/collisionEntry" },
+      "description": "Documented cases where the non-variantKey identifier fields alone don't distinguish two or more real, distinct cards. Empty for most games most of the time — a registry of exceptions, not a general mechanism. See SPEC.md 4.5, including the three cross-referential rules this schema cannot enforce on its own."
+    }
+  },
+  "$defs": {
+    "identifierField": {
+      "type": "object",
+      "required": ["name", "type"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "enum": ["string", "integer"] },
+        "case": {
+          "enum": ["upper", "lower", "asIs"],
+          "description": "Required normalization for string fields, applied before comparison, hashing, or display."
+        },
+        "zeroPad": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Display-only zero-padding width for integer fields. Never affects the numeric value or the canonical hash encoding (SPEC.md 5.2)."
+        },
+        "optional": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, this field may be absent from a given card's identity object entirely (never present as null)."
+        }
+      }
+    },
+    "setEntry": {
+      "type": "object",
+      "required": ["code", "name"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "releaseOrder": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "collisionEntry": {
+      "type": "object",
+      "required": ["matchFields", "variants"],
+      "properties": {
+        "matchFields": {
+          "type": "object",
+          "additionalProperties": { "type": ["string", "integer"] },
+          "description": "The identifier field values shared by the colliding cards. Keys must be a subset of this game's identifier.fields names, excluding variantKey itself — enforced by a companion validation script, not by this schema (see SPEC.md 4.5)."
+        },
+        "variants": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/$defs/collisionVariant" }
+        }
+      }
+    },
+    "collisionVariant": {
+      "type": "object",
+      "required": ["variantKey", "description"],
+      "properties": {
+        "variantKey": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Must state how a person can actually tell this variant apart physically — not just restate its name."
+        },
+        "reference": {
+          "type": "string",
+          "format": "uri",
+          "description": "Optional citation backing the claim — matters more here than elsewhere, since these are exactly the claims someone is likely to dispute."
+        }
+      }
+    }
+  }
+}
