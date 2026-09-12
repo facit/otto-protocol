@@ -67,7 +67,7 @@
     "knownCollisions": {
       "type": "array",
       "items": { "$ref": "#/$defs/collisionEntry" },
-      "description": "Documented cases where the non-variantKey identifier fields alone don't distinguish two or more real, distinct cards. Empty for most games most of the time — a registry of exceptions, not a general mechanism. See SPEC.md 4.5, including the three cross-referential rules this schema cannot enforce on its own."
+      "description": "Documented cases where the non-variantKey identifier fields alone don't distinguish two or more real, distinct cards. Empty for most games most of the time — a registry of exceptions, not a general mechanism. See SPEC.md 4.6, including the three cross-referential rules this schema cannot enforce on its own."
     }
   },
   "$defs": {
@@ -84,7 +84,7 @@
         "zeroPad": {
           "type": "integer",
           "minimum": 0,
-          "description": "Display-only zero-padding width for integer fields. Never affects the numeric value or the canonical hash encoding (SPEC.md 5.2)."
+          "description": "Display-only zero-padding width for integer fields. Never affects the numeric value or the canonical hash encoding (SPEC.md 5.5)."
         },
         "optional": {
           "type": "boolean",
@@ -95,11 +95,26 @@
     },
     "setEntry": {
       "type": "object",
-      "required": ["code", "name"],
+      "required": ["code", "name", "finishNumbering"],
+      "description": "One PRINT RUN, not necessarily one printed set code. Several entries may share a code when one code covers more than one run; each then requires printedTotal, which is what tells them apart. See SPEC.md 4.4.2 and 4.5 — this array is load-bearing for canonicalization, not descriptive metadata.",
       "properties": {
         "code": { "type": "string", "minLength": 1 },
         "name": { "type": "string", "minLength": 1 },
-        "releaseOrder": { "type": "integer", "minimum": 1 }
+        "releaseOrder": { "type": "integer", "minimum": 1 },
+        "finishNumbering": {
+          "enum": ["shared", "distinct"],
+          "description": "How this run numbers finishes. 'shared': one collectorNumber covers every finish and the finish field is what distinguishes them. 'distinct': each finish is its own collectorNumber, so the number already determines the finish and must never be derived by flipping the finish field (SPEC.md 4.4.1 — getting this wrong produces identities that hash cleanly and match nothing)."
+        },
+        "printedTotal": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The 'M' in this run's printed 'N/M'. Required on every entry whose code is shared with another entry, and forbidden otherwise — presence is determined by the code being shared, not by whether a total is printed on the card (SPEC.md 4.4.2). Enforced by the companion validation script, not by this schema."
+        },
+        "verified": {
+          "type": "boolean",
+          "default": true,
+          "description": "False marks an entry whose code or name has not yet been confirmed against canonicalSource — present so an honestly-incomplete file can still ship without the unchecked entries being mistaken for authoritative. See SPEC.md 9."
+        }
       }
     },
     "collisionEntry": {
@@ -109,7 +124,7 @@
         "matchFields": {
           "type": "object",
           "additionalProperties": { "type": ["string", "integer"] },
-          "description": "The identifier field values shared by the colliding cards. Keys must be a subset of this game's identifier.fields names, excluding variantKey itself — enforced by a companion validation script, not by this schema (see SPEC.md 4.5)."
+          "description": "The identifier field values shared by the colliding cards. Keys must be a subset of this game's identifier.fields names, excluding variantKey itself — enforced by a companion validation script, not by this schema (see SPEC.md 4.6)."
         },
         "variants": {
           "type": "array",
