@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "game": "swu",
   "displayName": "Star Wars: Unlimited",
-  "definitionVersion": 2,
+  "definitionVersion": 3,
   "canonicalSource": {
     "name": "Star Wars: Unlimited official card database",
     "url": "https://www.starwarsunlimited.com/cards"
@@ -59,14 +59,6 @@
     },
     {
       "code": "SOR",
-      "name": "Spark of Rebellion Tokens",
-      "releaseOrder": 1,
-      "finishNumbering": "shared",
-      "printedTotal": 4,
-      "verified": false
-    },
-    {
-      "code": "SOR",
       "name": "Spark of Rebellion Organized Play",
       "releaseOrder": 1,
       "finishNumbering": "shared",
@@ -90,14 +82,6 @@
     },
     {
       "code": "SHD",
-      "name": "Shadows of the Galaxy Tokens",
-      "releaseOrder": 2,
-      "finishNumbering": "shared",
-      "printedTotal": 4,
-      "verified": false
-    },
-    {
-      "code": "SHD",
       "name": "Shadows of the Galaxy Organized Play",
       "releaseOrder": 2,
       "finishNumbering": "shared",
@@ -110,14 +94,6 @@
       "releaseOrder": 3,
       "finishNumbering": "shared",
       "printedTotal": 257
-    },
-    {
-      "code": "TWI",
-      "name": "Twilight of the Republic Tokens",
-      "releaseOrder": 3,
-      "finishNumbering": "shared",
-      "printedTotal": 4,
-      "verified": false
     },
     {
       "code": "TWI",
@@ -281,6 +257,8 @@
     "sets enumerates PRINT RUNS, not printed set codes. SOR, SHD and TWI each appear several times because one printed code covers the mainline set plus separate promo, token and organized-play runs told apart only by the printed total (SPEC.md 4.4.2). Every other code belongs to exactly one run and therefore carries no printedTotal, even where a total is printed on the card.",
     "finishNumbering was derived from the reference catalog, not assumed: SOR/SHD/TWI pair each foil with its non-foil counterpart under one collector number ('shared'), while JTL onward give the foil printing its own number ('distinct'). Runs that exist in a single finish are marked 'shared', since no foil twin lives at another number. Never construct a 'distinct'-era foil identity by flipping the finish field on a standard card's number - see SPEC.md 4.4.1.",
     "Entries with \"verified\": false use an application internal set code and/or a descriptive placeholder name, not a confirmed printed code from canonicalSource. They are included so cards in them are representable at all, and must be checked before this file is treated as authoritative. The mainline eight sets are the only entries currently confirmed.",
+    "Tokens are out of scope for trading, which is why collectorNumber is declared an integer: SWU prints tokens as T001-T004, so the integer type excludes them by construction rather than by a rule someone has to remember. The SOR/SHD/TWI printed-total-04 runs were token sheets in their entirety and have been removed from sets accordingly; tokens that sit inside an otherwise tradeable set are simply not representable, which is the intended outcome. A game whose tokens ARE traded should declare collectorNumber as a string instead - but see SPEC.md 4.4.2 for the zero-padding hazard that choice carries.",
+    "definitionVersion 3 removes print runs that version 2 accepted, which SPEC.md 4.2's hard rule forbids. It is permissible only because no version of this file has ever shipped: no identity constructed under version 2 exists on any user's device. Once a version is released this kind of change is no longer available and a removed run must be left in place.",
     "The SOR/SHD/TWI '-2' and '-4' runs are prerelease promos and token sheets respectively. The printed-total-02 run under SHD is known to cover two unrelated promo programmes (a prerelease judge foil and a store-showdown award) that happen to share a printed count; their collector numbers differ, so no knownCollisions entry is required, but a future source that numbers them independently would need one.",
     "Treatments (Hyperspace, Showcase, Prestige, etc.) are not identifier fields - the canonical source already assigns each a distinct collectorNumber, so they are captured implicitly. Treatment names are display metadata only, never matched on.",
     "knownCollisions is intentionally empty. No verified real collision is currently known for this game; see SPEC.md 4.6 for the shape to use if/when one is found."

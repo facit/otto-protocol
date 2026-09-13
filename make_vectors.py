@@ -185,12 +185,12 @@ def main() -> int:
             ],
         },
         "known_gaps": {
-            "nonIntegerCollectorNumbers": {
+            "tokensOutOfScope": {
                 "count": skipped["non_numeric"],
-                "note": "Cards whose printed collector number is not an integer (tokens numbered "
-                        "T001 etc.) cannot be expressed while identifier.fields declares "
-                        "collectorNumber as type 'integer'. They are excluded from these vectors "
-                        "and are an unresolved question, not a decision — see SPEC.md 9.",
+                "note": "Tokens (collector numbers T001 etc.) are deliberately not expressible: "
+                        "collectorNumber is declared an integer, which excludes them by "
+                        "construction. This is a settled scope decision, not a gap to close — see "
+                        "SPEC.md 1 and 4.4.3.",
             },
             "unknownFinish": {
                 "count": skipped["unknown_finish"],

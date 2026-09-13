@@ -9,7 +9,7 @@
   },
   "definition": {
     "game": "swu",
-    "definitionVersion": 2
+    "definitionVersion": 3
   },
   "encodings": [
     {
@@ -163,7 +163,7 @@
         "collectorNumber": 5,
         "finish": "standard"
       },
-      "reason": "setCode 'SOR' is shared by 4 print runs, so printedTotal is required"
+      "reason": "setCode 'SOR' is shared by 3 print runs, so printedTotal is required"
     },
     {
       "note": "printedTotal matches no print run under this code",
@@ -391,9 +391,9 @@
     ]
   },
   "known_gaps": {
-    "nonIntegerCollectorNumbers": {
+    "tokensOutOfScope": {
       "count": 56,
-      "note": "Cards whose printed collector number is not an integer (tokens numbered T001 etc.) cannot be expressed while identifier.fields declares collectorNumber as type 'integer'. They are excluded from these vectors and are an unresolved question, not a decision \u2014 see SPEC.md 9."
+      "note": "Tokens (collector numbers T001 etc.) are deliberately not expressible: collectorNumber is declared an integer, which excludes them by construction. This is a settled scope decision, not a gap to close \u2014 see SPEC.md 1 and 4.4.3."
     },
     "unknownFinish": {
       "count": 424,

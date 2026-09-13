@@ -44,6 +44,11 @@ accident:
   identity — there are no accounts.
 - **A general internet/marketplace trading mode.** A fundamentally different feature (needs
   accounts, a backend, and a matching/trust model) — not addressed by this spec at all.
+- **Cards nobody trades.** A game's definition file decides what is expressible, and it is
+  legitimate for it to exclude filler that is not meaningfully traded — tokens, for instance, which
+  are not deck-legal and are supplied free with product. `definitions/swu.json` does exactly that;
+  see §4.4.3. This is a per-game decision, not a protocol-level one: nothing here prevents a game
+  whose tokens *are* collected from expressing them.
 
 ## 2. Terminology
 
@@ -301,6 +306,27 @@ optionality tracks exactly when it stops being load-bearing"). Two implementers 
 reasonably disagree about whether a mainline SOR card carries `252` — and if they disagree, the
 canonical encodings differ, the hashes differ, and the match is silently lost exactly as in §4.4.1.
 Tying it to a countable property of the definition file removes the judgement entirely.
+
+#### 4.4.3 Tokens, and using a field's type as a scope boundary
+
+SWU prints tokens with collector numbers like `T001`, which are not integers. `swu.json` declares
+`collectorNumber` as `"type": "integer"`, so those cards have no canonical form and cannot be
+traded — and that is deliberate. Tokens are not deck-legal and come free with product; excluding
+them costs nothing real.
+
+What is worth noticing is *how* they are excluded. The integer type does it by construction: there
+is no rule for an implementer to remember, no list of excluded cards to keep in sync, and no way to
+accidentally admit one. The alternative — declaring `collectorNumber` a string so every printed
+number is expressible — would make zero-padding significant, so `"007"` and `"7"` would hash
+differently and two implementations could silently fail to match on an ordinary card. Trading a
+whole class of silent divergence for 56 cards nobody trades is a bad exchange.
+
+A game whose tokens genuinely are collected can declare the field a string; it then owns that
+padding hazard and must specify the exact printed form in its own notes.
+
+Three SWU print runs (the printed-total-04 sheets under SOR, SHD and TWI) were tokens in their
+entirety and are therefore absent from `sets` altogether. Tokens inside an otherwise tradeable set
+need no special handling — they simply fail canonicalization like any other malformed identity.
 
 ### 4.5 Canonicalization and validation
 
@@ -653,16 +679,6 @@ Tracked here rather than silently assumed:
   affect correctness — `WantFilter` covers the negative case — but it determines whether iOS peers
   are discoverable without a connection, which is a significant difference in scan cost and battery
   in a busy room. Measure this before optimizing anything else in the transport.
-- **Some real cards have non-integer collector numbers, and cannot currently be expressed.** SWU
-  prints tokens as `T001`–`T004`, and 56 such cards exist across 13 sets including several mainline
-  ones — but `swu.json` declares `collectorNumber` as `"type": "integer"`, so no canonical identity
-  can be formed for them. Three ways out, none yet chosen: declare tokens out of scope for trading
-  (they are not deck-legal and are freely supplied, so arguably nobody trades them); change the
-  field to a string (which makes zero-padding significant, reintroducing exactly the `"007"` vs
-  `"7"` divergence this spec works to eliminate); or add an optional `numberPrefix` field, keeping
-  integer normalization and leaving tokens expressible. The third is additive and the least
-  destructive to §4.2's hard rule, but it is a product question as much as a technical one. Until
-  it is settled the vectors exclude these cards and say so.
 - The governance process for reviewing and merging definition-file contributions (who has merge
   rights, how disputes beyond what `canonicalSource` settles are resolved) is not yet defined.
 - `knownCollisions`'s shape (§4.6) is a first draft; expect to revise it once real collisions are
