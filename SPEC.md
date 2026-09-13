@@ -15,6 +15,11 @@ it. Companion files:
   serving as the worked example.
 - [`validate.py`](validate.py) — the contribution-time validator for the rules §4.6 lists as ones
   the JSON Schema structurally cannot enforce.
+- [`reference.py`](reference.py) — an executable reference implementation of §4.5, §5.2 and §5.5,
+  and [`vectors/swu-v1.json`](vectors/swu-v1.json), the conformance vectors generated from it. An
+  implementation that reproduces those bytes agrees with this document about the parts where
+  disagreement would otherwise be invisible.
+- [`README.md`](README.md) — orientation for a third-party implementer.
 
 ## 1. Scope
 
@@ -648,6 +653,16 @@ Tracked here rather than silently assumed:
   affect correctness — `WantFilter` covers the negative case — but it determines whether iOS peers
   are discoverable without a connection, which is a significant difference in scan cost and battery
   in a busy room. Measure this before optimizing anything else in the transport.
+- **Some real cards have non-integer collector numbers, and cannot currently be expressed.** SWU
+  prints tokens as `T001`–`T004`, and 56 such cards exist across 13 sets including several mainline
+  ones — but `swu.json` declares `collectorNumber` as `"type": "integer"`, so no canonical identity
+  can be formed for them. Three ways out, none yet chosen: declare tokens out of scope for trading
+  (they are not deck-legal and are freely supplied, so arguably nobody trades them); change the
+  field to a string (which makes zero-padding significant, reintroducing exactly the `"007"` vs
+  `"7"` divergence this spec works to eliminate); or add an optional `numberPrefix` field, keeping
+  integer normalization and leaving tokens expressible. The third is additive and the least
+  destructive to §4.2's hard rule, but it is a product question as much as a technical one. Until
+  it is settled the vectors exclude these cards and say so.
 - The governance process for reviewing and merging definition-file contributions (who has merge
   rights, how disputes beyond what `canonicalSource` settles are resolved) is not yet defined.
 - `knownCollisions`'s shape (§4.6) is a first draft; expect to revise it once real collisions are
