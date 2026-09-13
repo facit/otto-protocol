@@ -385,9 +385,11 @@ the same set code, number, and total. `identifier.fields` may include one additi
 ]
 ```
 
-(The above is illustrative of the *shape* only — it is not a claim that this specific collision is
-real. `knownCollisions` should start empty for a new game and grow only as genuine cases are found
-and verified against the canonical source.)
+(The above is illustrative of the *shape* only — the field values are invented. But the situation
+it describes is not hypothetical: see §4.6.1.)
+
+`knownCollisions` should start empty for a new game and grow only as genuine cases are found and
+verified against the canonical source.
 
 Semantics: if a card's other fields match a registered `matchFields` entry, a complete identity for
 that card **must** also carry one of the listed `variantKey` values. An identity that matches a
@@ -407,6 +409,38 @@ request, same as schema validation:
 6. `definitionVersion` has increased relative to the file being replaced, and no existing
    `sets` entry's `printedTotal` or `finishNumbering` has changed value — either would silently
    re-point identities that already exist on users' devices (§4.2's hard rule).
+
+#### 4.6.1 A real collision, and why it is not registered yet
+
+This mechanism was drafted defensively, against collisions nobody had found. One exists.
+
+Two *Star Wars: Unlimited* promos from different programmes — a prerelease promo and a Store
+Showdown Top 8 promo — are printed with an identical set code **and** an identical collector
+number. Every field in §4.3 gives the same value for both, so they are one identity as far as this
+spec is concerned, and a user who holds one cannot express which.
+
+It is nevertheless **not** registered in `definitions/swu.json`, and the reason is worth stating
+because it constrains how this mechanism can be used. §4.6 requires each variant's `description` to
+say how a person can physically tell it apart — a rule that exists so a matched user can actually
+check what they are holding. Nobody has established that for these two cards. A `variantKey` pair
+with a guessed or merely nominal description would satisfy the schema, satisfy the validator, and
+be worthless at the table: the user would be asked to pick between two options they cannot
+distinguish by looking.
+
+So the blocker is data, not mechanism, and the honest interim position is the one the definition
+file takes — those print runs are absent from `sets` entirely, so their cards cannot be traded
+rather than being tradeable-but-ambiguous. Excluding a card is recoverable; shipping an identity
+that silently conflates two different cards is not.
+
+Two things follow for anyone extending this spec:
+
+- A game's *canonical source* being authoritative does not make it complete or correct. This
+  collision sits behind source data that is both — the same card appears with two different printed
+  totals, and one of the affected runs is not listed at all. §4.7's tiebreaker rule settles
+  disputes; it does not manufacture facts the source lacks.
+- An application whose own card identity has no equivalent of `variantKey` inherits this problem
+  with no way to express it. That is a real constraint on any implementation whose internal
+  identity is a flat set-code-plus-number key, and it has to be solved there, not here.
 
 ### 4.7 Extending or correcting a definition file
 
@@ -681,8 +715,10 @@ Tracked here rather than silently assumed:
   in a busy room. Measure this before optimizing anything else in the transport.
 - The governance process for reviewing and merging definition-file contributions (who has merge
   rights, how disputes beyond what `canonicalSource` settles are resolved) is not yet defined.
-- `knownCollisions`'s shape (§4.6) is a first draft; expect to revise it once real collisions are
-  found in practice rather than anticipated in the abstract.
+- `knownCollisions`'s shape (§4.6) is a first draft. A real collision is now known (§4.6.1) but
+  cannot be registered until someone establishes how the two cards are physically distinguishable;
+  expect the shape to need revision once it is exercised against a real case rather than an
+  imagined one.
 - `nMax` (§5.3) is derived from the filter's false-positive curve alone. Whether 24 cards is enough
   for the *product* — whether users routinely want to advertise more and find the cap frustrating —
   is a question for real use, and the answer may argue for a different discovery shape rather than

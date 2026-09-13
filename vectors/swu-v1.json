@@ -9,7 +9,7 @@
   },
   "definition": {
     "game": "swu",
-    "definitionVersion": 4
+    "definitionVersion": 5
   },
   "encodings": [
     {
@@ -163,7 +163,7 @@
         "collectorNumber": 5,
         "finish": "standard"
       },
-      "reason": "setCode 'SOR' is shared by 3 print runs, so printedTotal is required"
+      "reason": "setCode 'SOR' is shared by 2 print runs, so printedTotal is required"
     },
     {
       "note": "printedTotal matches no print run under this code",
@@ -398,6 +398,13 @@
     "unknownFinish": {
       "count": 424,
       "note": "Cards whose finish the source catalog does not record. Excluded here because the vectors must not assert a finish nothing verified."
+    },
+    "excludedPrintRuns": {
+      "runs": [
+        "SOR printedTotal=2",
+        "SHD printedTotal=2"
+      ],
+      "note": "Prerelease and judge promos, absent from the definition file's sets and so not canonicalizable at all. The source data for them is wrong and incomplete, and two of them collide on set code and collector number \u2014 see SPEC.md 4.6.1. A holding position pending real data, not a ruling that these cards are untradeable."
     }
   }
 }

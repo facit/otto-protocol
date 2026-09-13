@@ -197,6 +197,14 @@ def main() -> int:
                 "note": "Cards whose finish the source catalog does not record. Excluded here "
                         "because the vectors must not assert a finish nothing verified.",
             },
+            "excludedPrintRuns": {
+                "runs": ["SOR printedTotal=2", "SHD printedTotal=2"],
+                "note": "Prerelease and judge promos, absent from the definition file's sets and "
+                        "so not canonicalizable at all. The source data for them is wrong and "
+                        "incomplete, and two of them collide on set code and collector number — "
+                        "see SPEC.md 4.6.1. A holding position pending real data, not a ruling "
+                        "that these cards are untradeable.",
+            },
         },
     }
 

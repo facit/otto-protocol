@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "game": "swu",
   "displayName": "Star Wars: Unlimited",
-  "definitionVersion": 4,
+  "definitionVersion": 5,
   "canonicalSource": {
     "name": "Star Wars: Unlimited official card database",
     "url": "https://www.starwarsunlimited.com/cards"
@@ -51,14 +51,6 @@
     },
     {
       "code": "SOR",
-      "name": "Spark of Rebellion: Prerelease and Judge Promos",
-      "releaseOrder": 1,
-      "finishNumbering": "shared",
-      "printedTotal": 2,
-      "verified": false
-    },
-    {
-      "code": "SOR",
       "name": "Spark of Rebellion: Weekly Play Promos",
       "releaseOrder": 1,
       "finishNumbering": "shared",
@@ -70,14 +62,6 @@
       "releaseOrder": 2,
       "finishNumbering": "shared",
       "printedTotal": 262
-    },
-    {
-      "code": "SHD",
-      "name": "Shadows of the Galaxy: Prerelease Judge and Store Showdown Promos",
-      "releaseOrder": 2,
-      "finishNumbering": "shared",
-      "printedTotal": 2,
-      "verified": false
     },
     {
       "code": "SHD",
@@ -168,10 +152,9 @@
     },
     {
       "code": "TS26",
-      "name": "TS26",
+      "name": "2026 Twin Suns",
       "releaseOrder": 8,
-      "finishNumbering": "shared",
-      "verified": false
+      "finishNumbering": "shared"
     },
     {
       "code": "P25",
@@ -224,17 +207,15 @@
     },
     {
       "code": "G25",
-      "name": "G25",
+      "name": "2025 Gift Box",
       "releaseOrder": 8,
-      "finishNumbering": "shared",
-      "verified": false
+      "finishNumbering": "shared"
     },
     {
       "code": "GG",
-      "name": "GG",
+      "name": "Gamegenic Promos",
       "releaseOrder": 8,
-      "finishNumbering": "shared",
-      "verified": false
+      "finishNumbering": "shared"
     },
     {
       "code": "MV26",
@@ -249,10 +230,10 @@
     "finishNumbering was derived from the reference catalog, not assumed: SOR/SHD/TWI pair each foil with its non-foil counterpart under one collector number ('shared'), while JTL onward give the foil printing its own number ('distinct'). Runs that exist in a single finish are marked 'shared', since no foil twin lives at another number. Never construct a 'distinct'-era foil identity by flipping the finish field on a standard card's number - see SPEC.md 4.4.1.",
     "Entries with \"verified\": false use an application internal set code and/or a descriptive placeholder name, not a confirmed printed code from canonicalSource. They are included so cards in them are representable at all, and must be checked before this file is treated as authoritative. The mainline eight sets are the only entries currently confirmed.",
     "Tokens are out of scope for trading, which is why collectorNumber is declared an integer: SWU prints tokens as T001-T004, so the integer type excludes them by construction rather than by a rule someone has to remember. The SOR/SHD/TWI printed-total-04 runs were token sheets in their entirety and have been removed from sets accordingly; tokens that sit inside an otherwise tradeable set are simply not representable, which is the intended outcome. A game whose tokens ARE traded should declare collectorNumber as a string instead - but see SPEC.md 4.4.2 for the zero-padding hazard that choice carries.",
-    "The SOR/SHD/TWI '-2' and '-4' runs are prerelease promos and token sheets respectively. The printed-total-02 run under SHD is known to cover two unrelated promo programmes (a prerelease judge foil and a store-showdown award) that happen to share a printed count; their collector numbers differ, so no knownCollisions entry is required, but a future source that numbers them independently would need one.",
     "Treatments (Hyperspace, Showcase, Prestige, etc.) are not identifier fields - the canonical source already assigns each a distinct collectorNumber, so they are captured implicitly. Treatment names are display metadata only, never matched on.",
-    "knownCollisions is intentionally empty. No verified real collision is currently known for this game; see SPEC.md 4.6 for the shape to use if/when one is found.",
     "The SOR/SHD/TWI weekly-play runs have no official set name of their own: those cards are officially part of the corresponding main set and are distinguished only by the printed total (a main-set card reads SOR 019/252, its weekly-play counterpart SOR 19/20 - which is why the application's internal code is SOR-20). The names here deliberately follow the convention of the later dedicated sets (JTLP and onward) for consistency; the codes and totals are confirmed, the names are a local convention.",
-    "Names still marked \"verified\": false are drawn from the catalog's own variant_label (Convention Exclusive, Judge Program, Movie Promo) or from the programme they are known to belong to, but the exact official wording has not been confirmed against canonicalSource. Five runs remain genuinely unidentified: the SOR and SHD printed-total-02 runs, TS26, G25 and GG. The official database is itself partially wrong and partially missing here - the SHD prerelease promos are not listed on it at all - so these may not be resolvable from the canonical source."
+    "Names still marked \"verified\": false are drawn from the catalog's own variant_label (Convention Exclusive, Judge Program, Movie Promo) or from the programme they are known to belong to, but the exact official wording has not been confirmed against canonicalSource. Five runs remain genuinely unidentified: the SOR and SHD printed-total-02 runs, TS26, G25 and GG. The official database is itself partially wrong and partially missing here - the SHD prerelease promos are not listed on it at all - so these may not be resolvable from the canonical source.",
+    "knownCollisions is empty, but NOT because this game has no collisions - it has at least one. Two SHD promos from different programmes (a prerelease promo and a Store Showdown Top 8 promo) are printed with an identical set code AND collector number, which is exactly the case section 4.6 exists for. It is not registered here because a knownCollisions entry must state how a person can physically tell the variants apart, and that has not been established. Registering it is blocked on data, not on the mechanism.",
+    "The SOR and SHD printed-total-02 runs (prerelease and judge promos) are deliberately absent from sets, so cards in them cannot currently be traded. The source catalog's data for them is both wrong and incomplete - the same card appears as '2/2' and as '002/002', and the SHD prerelease promos are not listed at all - and the collision above means the identifier as it stands could not distinguish them anyway. Excluding them is a holding position pending real data, not a judgement that they are untradeable."
   ]
 }
