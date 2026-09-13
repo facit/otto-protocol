@@ -125,6 +125,28 @@ def canonicalize(identity: dict, d: Definition) -> dict:
     if "finish" in out and out["finish"] not in d.finishes:
         raise NotCanonical(f"finish {out['finish']!r} is not in this game's closed vocabulary")
 
+    # Rule 7: variantKey is present if and ONLY if a registered collision matches. The "only if"
+    # half matters as much as the other: a spurious variantKey changes the canonical bytes, so the
+    # same physical card encoded with and without one lands on a disjoint set of filter bits and
+    # the two never match — with nothing reporting an error.
+    matched = [c for c in d.doc.get("knownCollisions", [])
+               if c.get("matchFields")
+               and all(out.get(k) == v for k, v in c["matchFields"].items())]
+    if matched:
+        allowed = {v["variantKey"] for v in matched[0].get("variants", [])}
+        if "variantKey" not in out:
+            raise NotCanonical(
+                f"identity matches a registered collision, so variantKey is required; "
+                f"expected one of {sorted(allowed)}")
+        if out["variantKey"] not in allowed:
+            raise NotCanonical(
+                f"variantKey {out['variantKey']!r} is not registered for this collision; "
+                f"expected one of {sorted(allowed)}")
+    elif "variantKey" in out:
+        raise NotCanonical(
+            "variantKey is present but no registered collision matches this identity; it is for "
+            "registered exceptions only (SPEC.md 4.6)")
+
     # Rule 6's catalog check cannot be made here: this file ships no card catalog, so it can only
     # enforce that the run declares a numbering rule at all. An implementation that DOES hold a
     # catalog must additionally verify, under "distinct", that the collectorNumber really is the

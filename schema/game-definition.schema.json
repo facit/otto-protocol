@@ -67,7 +67,7 @@
     "knownCollisions": {
       "type": "array",
       "items": { "$ref": "#/$defs/collisionEntry" },
-      "description": "Documented cases where the non-variantKey identifier fields alone don't distinguish two or more real, distinct cards. Empty for most games most of the time — a registry of exceptions, not a general mechanism. See SPEC.md 4.6, including the three cross-referential rules this schema cannot enforce on its own."
+      "description": "Documented cases where the non-variantKey identifier fields alone don't distinguish two or more real, distinct cards. Empty for most games most of the time — a registry of exceptions, not a general mechanism. See SPEC.md 4.6, including the cross-referential rules this schema cannot enforce on its own."
     }
   },
   "$defs": {

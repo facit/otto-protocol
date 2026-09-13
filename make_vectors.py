@@ -98,7 +98,57 @@ def rejection_vector(identity: dict, note: str) -> dict:
     raise AssertionError(f"expected {identity!r} to be rejected ({note})")
 
 
+def selftest_variant_key() -> None:
+    """Exercise both halves of rule 7.
+
+    swu.json's knownCollisions is empty, so the "required when a collision matches" half cannot be
+    reached from the real definition file and would otherwise go untested until the day someone
+    registers a real collision — which is the worst time to discover it is broken. A synthetic
+    definition covers it here.
+    """
+    synthetic = r.Definition({
+        "game": "test", "definitionVersion": 1,
+        "identifier": {"fields": [
+            {"name": "setCode", "type": "string", "case": "upper"},
+            {"name": "collectorNumber", "type": "integer"},
+            {"name": "finish", "type": "string", "case": "lower"},
+            {"name": "variantKey", "type": "string", "case": "lower", "optional": True},
+        ]},
+        "finishes": ["standard"],
+        "sets": [{"code": "AAA", "name": "Test", "finishNumbering": "shared"}],
+        "knownCollisions": [{
+            "matchFields": {"setCode": "AAA", "collectorNumber": 1},
+            "variants": [{"variantKey": "left", "description": "has a left mark"},
+                         {"variantKey": "right", "description": "has a right mark"}],
+        }],
+    })
+    base = {"setCode": "AAA", "collectorNumber": 1, "finish": "standard"}
+
+    for bad, why in [(base, "collision matches but variantKey absent"),
+                     ({**base, "variantKey": "middle"}, "variantKey not registered for it")]:
+        try:
+            r.canonicalize(bad, synthetic)
+        except r.NotCanonical:
+            pass
+        else:
+            raise AssertionError(f"rule 7 not enforced: {why}")
+
+    for good in ({**base, "variantKey": "left"}, {**base, "variantKey": "right"}):
+        r.canonicalize(good, synthetic)
+
+    # a card the collision does not match must still refuse a variantKey
+    try:
+        r.canonicalize({"setCode": "AAA", "collectorNumber": 2, "finish": "standard",
+                        "variantKey": "left"}, synthetic)
+    except r.NotCanonical:
+        pass
+    else:
+        raise AssertionError("rule 7 not enforced: variantKey on a non-colliding card")
+    print("selftest: rule 7 enforced in both directions")
+
+
 def main() -> int:
+    selftest_variant_key()
     cards, skipped = catalog()
     by_key = {json.dumps(c, sort_keys=True): c for c in cards}
     print(f"catalog: {len(by_key)} distinct identities  (skipped {skipped})")
@@ -146,6 +196,10 @@ def main() -> int:
                          "undeclared field; name is display metadata, never identity"),
         rejection_vector({"setCode": "JTL", "finish": "standard"},
                          "missing required field"),
+        rejection_vector({"setCode": "JTL", "collectorNumber": 100, "finish": "standard",
+                          "variantKey": "some-variant"},
+                         "variantKey present when no registered collision matches — it is for "
+                         "registered exceptions only, and a spurious one moves every filter bit"),
     ]
 
     # A filter built from a real want list, plus a genuine false positive found by search.

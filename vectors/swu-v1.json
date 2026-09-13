@@ -220,6 +220,16 @@
         "finish": "standard"
       },
       "reason": "missing required field 'collectorNumber'"
+    },
+    {
+      "note": "variantKey present when no registered collision matches \u2014 it is for registered exceptions only, and a spurious one moves every filter bit",
+      "input": {
+        "setCode": "JTL",
+        "collectorNumber": 100,
+        "finish": "standard",
+        "variantKey": "some-variant"
+      },
+      "reason": "variantKey is present but no registered collision matches this identity; it is for registered exceptions only (SPEC.md 4.6)"
     }
   ],
   "filter": {
