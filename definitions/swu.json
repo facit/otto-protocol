@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "game": "swu",
   "displayName": "Star Wars: Unlimited",
-  "definitionVersion": 3,
+  "definitionVersion": 4,
   "canonicalSource": {
     "name": "Star Wars: Unlimited official card database",
     "url": "https://www.starwarsunlimited.com/cards"
@@ -51,7 +51,7 @@
     },
     {
       "code": "SOR",
-      "name": "Spark of Rebellion Prerelease Promos",
+      "name": "Spark of Rebellion: Prerelease and Judge Promos",
       "releaseOrder": 1,
       "finishNumbering": "shared",
       "printedTotal": 2,
@@ -59,11 +59,10 @@
     },
     {
       "code": "SOR",
-      "name": "Spark of Rebellion Organized Play",
+      "name": "Spark of Rebellion: Weekly Play Promos",
       "releaseOrder": 1,
       "finishNumbering": "shared",
-      "printedTotal": 20,
-      "verified": false
+      "printedTotal": 20
     },
     {
       "code": "SHD",
@@ -74,7 +73,7 @@
     },
     {
       "code": "SHD",
-      "name": "Shadows of the Galaxy Promos (02)",
+      "name": "Shadows of the Galaxy: Prerelease Judge and Store Showdown Promos",
       "releaseOrder": 2,
       "finishNumbering": "shared",
       "printedTotal": 2,
@@ -82,11 +81,10 @@
     },
     {
       "code": "SHD",
-      "name": "Shadows of the Galaxy Organized Play",
+      "name": "Shadows of the Galaxy: Weekly Play Promos",
       "releaseOrder": 2,
       "finishNumbering": "shared",
-      "printedTotal": 20,
-      "verified": false
+      "printedTotal": 20
     },
     {
       "code": "TWI",
@@ -97,11 +95,10 @@
     },
     {
       "code": "TWI",
-      "name": "Twilight of the Republic Organized Play",
+      "name": "Twilight of the Republic: Weekly Play Promos",
       "releaseOrder": 3,
       "finishNumbering": "shared",
-      "printedTotal": 20,
-      "verified": false
+      "printedTotal": 20
     },
     {
       "code": "JTL",
@@ -111,23 +108,21 @@
     },
     {
       "code": "JTLP",
-      "name": "Jump to Lightspeed Weekly Play",
+      "name": "Jump to Lightspeed: Weekly Play Promos",
       "releaseOrder": 4,
-      "finishNumbering": "distinct",
-      "verified": false
+      "finishNumbering": "distinct"
     },
     {
       "code": "LOF",
-      "name": "Legacy of the Force",
+      "name": "Legends of the Force",
       "releaseOrder": 5,
       "finishNumbering": "distinct"
     },
     {
       "code": "LOFP",
-      "name": "Legacy of the Force Weekly Play",
+      "name": "Legends of the Force: Weekly Play Promos",
       "releaseOrder": 5,
-      "finishNumbering": "distinct",
-      "verified": false
+      "finishNumbering": "distinct"
     },
     {
       "code": "SEC",
@@ -137,10 +132,9 @@
     },
     {
       "code": "SECP",
-      "name": "Secrets of Power Weekly Play",
+      "name": "Secrets of Power: Weekly Play Promos",
       "releaseOrder": 6,
-      "finishNumbering": "distinct",
-      "verified": false
+      "finishNumbering": "distinct"
     },
     {
       "code": "LAW",
@@ -150,10 +144,9 @@
     },
     {
       "code": "LAWP",
-      "name": "A Lawless Time Weekly Play",
+      "name": "A Lawless Time: Weekly Play Promos",
       "releaseOrder": 7,
-      "finishNumbering": "distinct",
-      "verified": false
+      "finishNumbering": "distinct"
     },
     {
       "code": "ASH",
@@ -163,17 +156,15 @@
     },
     {
       "code": "ASHP",
-      "name": "Ashes of the Empire Weekly Play",
+      "name": "Ashes of the Empire: Weekly Play Promos",
       "releaseOrder": 8,
-      "finishNumbering": "distinct",
-      "verified": false
+      "finishNumbering": "distinct"
     },
     {
       "code": "IBH",
-      "name": "IBH",
+      "name": "Intro Battle: Hoth",
       "releaseOrder": 8,
-      "finishNumbering": "shared",
-      "verified": false
+      "finishNumbering": "shared"
     },
     {
       "code": "TS26",
@@ -184,49 +175,49 @@
     },
     {
       "code": "P25",
-      "name": "P25",
+      "name": "Promos (2025)",
       "releaseOrder": 8,
       "finishNumbering": "shared",
       "verified": false
     },
     {
       "code": "P26",
-      "name": "P26",
+      "name": "Promos (2026)",
       "releaseOrder": 8,
       "finishNumbering": "shared",
       "verified": false
     },
     {
       "code": "C24",
-      "name": "C24",
+      "name": "Convention Exclusives (2024)",
       "releaseOrder": 8,
       "finishNumbering": "shared",
       "verified": false
     },
     {
       "code": "C25",
-      "name": "C25",
+      "name": "Convention Exclusives (2025)",
       "releaseOrder": 8,
       "finishNumbering": "shared",
       "verified": false
     },
     {
       "code": "C26",
-      "name": "C26",
+      "name": "Convention Exclusives (2026)",
       "releaseOrder": 8,
       "finishNumbering": "shared",
       "verified": false
     },
     {
       "code": "J24",
-      "name": "J24",
+      "name": "Judge Program (2024)",
       "releaseOrder": 8,
       "finishNumbering": "shared",
       "verified": false
     },
     {
       "code": "J25",
-      "name": "J25",
+      "name": "Judge Program (2025)",
       "releaseOrder": 8,
       "finishNumbering": "shared",
       "verified": false
@@ -247,7 +238,7 @@
     },
     {
       "code": "MV26",
-      "name": "MV26",
+      "name": "Movie Promos (2026)",
       "releaseOrder": 8,
       "finishNumbering": "shared",
       "verified": false
@@ -258,9 +249,10 @@
     "finishNumbering was derived from the reference catalog, not assumed: SOR/SHD/TWI pair each foil with its non-foil counterpart under one collector number ('shared'), while JTL onward give the foil printing its own number ('distinct'). Runs that exist in a single finish are marked 'shared', since no foil twin lives at another number. Never construct a 'distinct'-era foil identity by flipping the finish field on a standard card's number - see SPEC.md 4.4.1.",
     "Entries with \"verified\": false use an application internal set code and/or a descriptive placeholder name, not a confirmed printed code from canonicalSource. They are included so cards in them are representable at all, and must be checked before this file is treated as authoritative. The mainline eight sets are the only entries currently confirmed.",
     "Tokens are out of scope for trading, which is why collectorNumber is declared an integer: SWU prints tokens as T001-T004, so the integer type excludes them by construction rather than by a rule someone has to remember. The SOR/SHD/TWI printed-total-04 runs were token sheets in their entirety and have been removed from sets accordingly; tokens that sit inside an otherwise tradeable set are simply not representable, which is the intended outcome. A game whose tokens ARE traded should declare collectorNumber as a string instead - but see SPEC.md 4.4.2 for the zero-padding hazard that choice carries.",
-    "definitionVersion 3 removes print runs that version 2 accepted, which SPEC.md 4.2's hard rule forbids. It is permissible only because no version of this file has ever shipped: no identity constructed under version 2 exists on any user's device. Once a version is released this kind of change is no longer available and a removed run must be left in place.",
     "The SOR/SHD/TWI '-2' and '-4' runs are prerelease promos and token sheets respectively. The printed-total-02 run under SHD is known to cover two unrelated promo programmes (a prerelease judge foil and a store-showdown award) that happen to share a printed count; their collector numbers differ, so no knownCollisions entry is required, but a future source that numbers them independently would need one.",
     "Treatments (Hyperspace, Showcase, Prestige, etc.) are not identifier fields - the canonical source already assigns each a distinct collectorNumber, so they are captured implicitly. Treatment names are display metadata only, never matched on.",
-    "knownCollisions is intentionally empty. No verified real collision is currently known for this game; see SPEC.md 4.6 for the shape to use if/when one is found."
+    "knownCollisions is intentionally empty. No verified real collision is currently known for this game; see SPEC.md 4.6 for the shape to use if/when one is found.",
+    "The SOR/SHD/TWI weekly-play runs have no official set name of their own: those cards are officially part of the corresponding main set and are distinguished only by the printed total (a main-set card reads SOR 019/252, its weekly-play counterpart SOR 19/20 - which is why the application's internal code is SOR-20). The names here deliberately follow the convention of the later dedicated sets (JTLP and onward) for consistency; the codes and totals are confirmed, the names are a local convention.",
+    "Names still marked \"verified\": false are drawn from the catalog's own variant_label (Convention Exclusive, Judge Program, Movie Promo) or from the programme they are known to belong to, but the exact official wording has not been confirmed against canonicalSource. Five runs remain genuinely unidentified: the SOR and SHD printed-total-02 runs, TS26, G25 and GG. The official database is itself partially wrong and partially missing here - the SHD prerelease promos are not listed on it at all - so these may not be resolvable from the canonical source."
   ]
 }

@@ -64,8 +64,8 @@ settled before anyone ships against it — notably whether an iOS peripheral can
 at all, which is unverified on real hardware. The protocol is designed so the answer does not
 affect correctness, only scan cost.
 
-`definitions/swu.json` is honest about its own gaps: 22 of its 30 print runs are marked
-`"verified": false`, meaning the set code or name comes from an application's internal naming
-rather than a confirmed printed code. Those need checking against `canonicalSource` before the file
+`definitions/swu.json` is honest about its own gaps: 13 of its 30 print runs are marked
+`"verified": false`, meaning the exact official name has not been confirmed against
+`canonicalSource` (the set codes themselves are sound). Those need checking against `canonicalSource` before the file
 is treated as authoritative. Tokens are deliberately not expressible (§4.4.3) — that is a scope
 decision, not a gap.
