@@ -31,15 +31,22 @@ branches.
   to the canonical files.
 - All 8,587 expressible SWU card identities canonicalize cleanly against the real catalog.
 
+**Verified on the Mac (Xcode 27.0, iPhone 17 simulator, iOS 26.4.1):**
+
+- The Swift now compiles. The first-ever compile of the ~3,000 lines across ten files produced a
+  single error (`TradeWire.swift`, an unqualified static member), since fixed.
+- `TradeProtocolConformance.runDebugCheck()` ran and passed: 87 checks, no failures. The run
+  needed a temporary call from app launch (not committed) and a command-line
+  `IPHONEOS_DEPLOYMENT_TARGET=26.4` override, because the installed simulators are older than the
+  project's 26.5 deployment target.
+
 **Not verified at all:**
 
-- **No Swift has ever been compiled.** There is no Swift toolchain in the cloud container. ~3,000
-  lines across ten files are desk-checked only. Expect first-build errors.
 - **No BLE code has been near a radio.** Advertising, connection handling, the long-read path, the
-  notify race — none of it observed. Two physical devices are required; the simulator cannot do it.
-- The conformance runner (`TradeProtocolConformance.runDebugCheck()`, 24 checks) has never been
-  executed. It is deliberately **not** wired into startup — call it from a debug menu or a
-  breakpoint.
+  notify race — none of it observed. Compiling says nothing about behaviour here. Two physical
+  devices are required; the simulator cannot do it.
+- The conformance runner is deliberately **not** wired into startup — call it from a debug menu or
+  a breakpoint.
 
 ## Next steps, roughly in value order
 
