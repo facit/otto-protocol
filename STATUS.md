@@ -63,11 +63,6 @@ branches.
 
 ## Known gaps and deliberate exclusions
 
-- **Open items from a desk review of the BLE services** (found by reading, not on a radio):
-  the peripheral never expires `PeerState` for a central that disconnects before `PeerConfirmed`;
-  `PeerCandidates` is recomputed on every long-read chunk instead of once per exchange;
-  `didDiscoverServices` takes `services?.first` without checking it is the game's service UUID;
-  `cachedFilters` is never pruned.
 - Tokens are out of scope by decision (§1, §4.4.3) — `collectorNumber` is an integer, which
   excludes them by construction.
 - The SOR and SHD printed-total-02 promo runs are absent from `sets`, so their cards cannot be
