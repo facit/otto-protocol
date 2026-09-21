@@ -571,56 +571,95 @@ tradeoff for the filter's small size. Confirming a candidate requires a short BL
 
 ### 6.1 Characteristics
 
-| Characteristic | Direction | Contents |
-|---|---|---|
-| `Info` | peripheral → central (read) | protocol version, `game`, `definitionVersion`, peer's display handle |
-| `WantFilter` | peripheral → central (read) | the peripheral's 16-byte Want-list Bloom filter (§5) |
-| `MyCandidates` | central → peripheral (write) | an object: the central's own 16-byte Want filter, plus its candidate cards (its Have-cards that hit the peripheral's filter) |
-| `PeerCandidates` | peripheral → central (read) | the peripheral's own candidate cards (its Have-cards that hit the central's filter) |
-| `Confirmed` | peripheral → central (notify) | which entries of `MyCandidates` are genuine matches against the peripheral's real Want list |
-| `PeerConfirmed` | central → peripheral (write) | which entries of `PeerCandidates` are genuine matches against the central's real Want list |
+All UUIDs are **derived, not assigned by hand**, the same way as the service UUID in §3.1:
 
-`PeerCandidates`, `Confirmed` and `PeerConfirmed` carry plain arrays of the same JSON card identity
-objects defined in §4.3 — there is no separate, more compact wire format for this step.
-Post-connection BLE MTU is generous (commonly 185+ bytes after negotiation), so the size pressure
-that shaped the advertisement layer in §3.2 does not apply here.
-
-`MyCandidates` is the one exception, an object rather than a bare array:
-
-```json
-{ "filter": "<the central's 16-byte Want filter, base64>", "candidates": [ /* identity objects */ ] }
+```
+characteristicUUID(name) = UUIDv5(PROTOCOL_NAMESPACE_UUID, "characteristic:" + name)
 ```
 
-The filter has to travel with it. The peripheral cannot produce `PeerCandidates` — *its* Have-cards
-that hit the *central's* filter — without holding the central's filter, and nothing guarantees the
-peripheral ever scanned that peer's advertisement: both roles run simultaneously, but which peers
-each role has seen is independent. Carrying it in the same write also makes the §6.3 gate atomic,
-since a peer cannot obtain `PeerCandidates` without having disclosed both its filter and its
-candidates in one operation.
+so any implementer can compute them unilaterally, with no registry and no coordination. They are
+the same for every game — only the *service* UUID is per-game.
 
-`WantFilter` is the mirror of that field, for the other direction: it exists so a peer whose
-platform cannot advertise its filter (§3.2 — in practice every iOS peripheral) is still fully
-discoverable. A central that already read a filter from the advertisement MAY skip this read.
+| Characteristic | UUID | Direction | Contents |
+|---|---|---|---|
+| `Info` | `5694a89a-12f4-5b50-a3e8-f3e9c5409c1f` | peripheral → central (read) | JSON: protocol version, `game`, `definitionVersion`, display handle |
+| `WantFilter` | `7ed5862c-bb74-5bac-b452-5b9704f07772` | peripheral → central (read) | the peripheral's 16-byte Want filter (§5), raw |
+| `MyCandidates` | `4801119a-d9ba-599e-b27b-3e84414f847e` | central → peripheral (write) | the central's 16-byte Want filter, then its candidate card hashes |
+| `PeerCandidates` | `ff30764d-13af-5664-a7f3-ea1c71a1192f` | peripheral → central (read) | the peripheral's candidate card hashes |
+| `Confirmed` | `d5b48536-a5c6-5b4a-a47c-b71e522615b1` | peripheral → central (notify) | the subset of `MyCandidates` the peripheral genuinely wants |
+| `PeerConfirmed` | `a6847f91-12e6-5d80-9f38-9af20b2e807e` | central → peripheral (write) | the subset of `PeerCandidates` the central genuinely wants |
 
-A device MUST NOT send more than `nMax` (§5.3) entries in any single candidate or confirmation
-list.
+`Info` is a JSON object, the only text payload here:
 
-### 6.2 Sequence
+```json
+{ "v": 1, "game": "swu", "definitionVersion": 5, "handle": "Pontus" }
+```
+
+`handle` is a self-chosen display name, not an identity (§8) — treat it as untrusted text from a
+stranger, truncate it for display, and never key anything on it.
+
+### 6.2 Card hashes on the wire
+
+The four candidate and confirmation characteristics carry **8-byte card hashes**, not card
+identities: the 64-bit FNV-1a of the canonical byte encoding (§5.5) — *the same value* the filter's
+bit positions are derived from — big-endian, concatenated with no separators or length prefix. A
+payload of *n* cards is exactly 8*n* bytes, so the count is the length divided by eight.
+
+An earlier draft specified JSON identity objects here, reasoning that "post-connection BLE MTU is
+generous (commonly 185+ bytes after negotiation), so the size pressure that shaped the
+advertisement layer does not apply". That was wrong twice over, and is recorded so nobody
+reinstates it:
+
+- 24 identities as JSON is **1602 bytes**, which does not fit a 185-byte MTU either.
+- MTU was never the real ceiling. A GATT attribute value is capped at **512 bytes** by the ATT
+  specification. Core Bluetooth performs long reads and writes transparently up to that limit and
+  not one byte beyond, so 512 is a hard wall rather than a tuning parameter. Even the compact
+  canonical encoding (549 bytes for 24 cards) clears it.
+
+Hashes make the problem disappear rather than manage it: 24 cards is **192 bytes**, comfortably one
+attribute value, with no chunking protocol, no lowered cap, and no second transport.
+
+They work because **neither side ever needs to learn a card — only to recognize one it already
+holds.** The central tests `PeerCandidates` against its own Want list; the peripheral tests
+`MyCandidates` against its own; and each confirmation is resolved by its recipient against its own
+Have list. A hash that resolves to nothing is a filter false positive, which is precisely what this
+step exists to discard. At `nMax` on each side the collision probability is on the order of 10⁻¹⁷.
+
+Reusing the filter's hash rather than defining a second one also means the published conformance
+vectors already pin this encoding down: a `fnv1a64Hex` value in `vectors/swu-v1.json` *is* the wire
+representation of that card, written big-endian.
+
+`MyCandidates` is the one characteristic carrying two things: the central's 16-byte filter followed
+by its candidate hashes, so its length is 16 + 8*n*. The filter has to travel with it — the
+peripheral cannot compute `PeerCandidates` (its Have-cards hitting the *central's* filter) without
+holding that filter, and nothing guarantees it ever scanned that peer's advertisement: both roles
+run simultaneously, but which peers each role has seen is independent. Carrying both in one write
+also makes the §6.3 gate atomic.
+
+`WantFilter` is the mirror of that field for the other direction: it exists so a peer whose platform
+cannot advertise its filter (§3.2 — in practice every iOS peripheral) is still fully discoverable. A
+central that already read a filter from the advertisement MAY skip this read.
+
+A device MUST NOT send more than `nMax` (§5.3) hashes in any single candidate or confirmation
+payload — 192 bytes, or 208 for `MyCandidates`. A peer MUST reject a payload that is over-long, or
+whose length is not a whole number of hashes.
+
+### 6.3 Sequence
 
 By the time two devices connect, each has (or can cheaply obtain) the other's filter, and each has
 already computed its own candidate list. Both directions are then resolved in one connection:
 
 1. Central connects to peripheral.
 2. Central reads `Info`, and `WantFilter` if it did not get the filter from the advertisement.
-3. Central writes `MyCandidates` — its own Want filter, and its Have-cards that hit the
-   peripheral's filter.
+3. Central writes `MyCandidates` — its own Want filter, followed by hashes of its Have-cards
+   that hit the peripheral's filter.
 4. Peripheral checks `MyCandidates` against its own real Want list and notifies `Confirmed`.
    *The central now knows what it holds that the peripheral genuinely wants.*
-5. Central reads `PeerCandidates` — the peripheral's Have-cards that hit the central's filter,
-   which the peripheral can now compute from the filter supplied in step 3. The peripheral MUST
-   refuse this read (or return an empty array) until step 3 has occurred; see §6.3.
-6. Central checks `PeerCandidates` **locally**, against its own real Want list already on device,
-   and writes the surviving entries back as `PeerConfirmed`.
+5. Central reads `PeerCandidates` — hashes of the peripheral's Have-cards that hit the central's
+   filter, which the peripheral can now compute from the filter supplied in step 3. The peripheral
+   MUST refuse this read (or return an empty payload) until step 3 has occurred; see §6.4.
+6. Central checks `PeerCandidates` **locally**, against the hashes of its own real Want list
+   already on device, and writes the surviving hashes back as `PeerConfirmed`.
    *The peripheral now knows what it holds that the central genuinely wants.*
 7. Central disconnects.
 
@@ -635,7 +674,7 @@ Do not hold the connection open past this exchange. Cache the confirmed results 
 continue scanning — this keeps the number of simultaneous BLE connections small regardless of how
 many candidates are nearby (see §7 for how a busy room is handled).
 
-### 6.3 Reciprocity: why `PeerCandidates` is gated
+### 6.4 Reciprocity: why `PeerCandidates` is gated
 
 `PeerCandidates` is the one place where any part of a Have list leaves its device (§2), so its
 exposure has to be bounded deliberately.
@@ -647,6 +686,11 @@ single passive attacker could walk a room and harvest every participant's comple
 while remaining, by construction, a peer with nothing to offer. §5.4's bit-count ceiling makes the
 crafted filter harder to build but does not prevent it (an attacker can simply insert real cards
 from the game's catalog, which is small and fully enumerable — §5.1).
+
+That the slice travels as hashes rather than identities (§6.2) changes none of this. The hash is
+over a card from a small, fully enumerable catalog, so anyone can build the reverse table once and
+read the slice straight off — it is a size optimization, exactly like the Bloom filter, and must
+never be described as obscuring anything.
 
 The gate therefore makes exposure *symmetric and simultaneous*: a peer learns a bounded slice of
 your Have list only after committing an equally bounded slice of its own, and both slices are

@@ -5,7 +5,16 @@
     "hashCount": 4,
     "maxWantEntries": 24,
     "maxBitsSet": 96,
-    "serviceUUID": "0a3edc52-5120-5164-972e-8dfddc85be41"
+    "serviceUUID": "0a3edc52-5120-5164-972e-8dfddc85be41",
+    "characteristics": {
+      "Info": "5694a89a-12f4-5b50-a3e8-f3e9c5409c1f",
+      "WantFilter": "7ed5862c-bb74-5bac-b452-5b9704f07772",
+      "MyCandidates": "4801119a-d9ba-599e-b27b-3e84414f847e",
+      "PeerCandidates": "ff30764d-13af-5664-a7f3-ea1c71a1192f",
+      "Confirmed": "d5b48536-a5c6-5b4a-a47c-b71e522615b1",
+      "PeerConfirmed": "a6847f91-12e6-5d80-9f38-9af20b2e807e"
+    },
+    "$comment": "UUIDs are DERIVED, not assigned \u2014 recomputing them here rather than hard-coding means the vectors prove the derivation instead of just asserting its output. Card hashes on the wire are the fnv1a64Hex values below, big-endian, 8 bytes each (SPEC.md 6.2)."
   },
   "definition": {
     "game": "swu",
