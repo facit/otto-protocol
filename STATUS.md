@@ -43,7 +43,8 @@ branches.
 **Not verified at all:**
 
 - **No BLE code has been near a radio.** Advertising, connection handling, the long-read path, the
-  write-then-read ordering of steps 3–4 — none of it observed. Compiling says nothing about
+  write-then-read ordering of steps 3–4, the random connect delay and the cross-role session-id
+  recognition (§6.1, §6.3) — none of it observed. Compiling says nothing about
   behaviour here. Two physical devices are required; the simulator cannot do it.
 - The conformance runner is deliberately **not** wired into startup — call it from a debug menu or
   a breakpoint.

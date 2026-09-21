@@ -582,7 +582,7 @@ the same for every game — only the *service* UUID is per-game.
 
 | Characteristic | UUID | Direction | Contents |
 |---|---|---|---|
-| `Info` | `5694a89a-12f4-5b50-a3e8-f3e9c5409c1f` | both (read + write) | JSON: protocol version, `game`, `definitionVersion`, display handle |
+| `Info` | `5694a89a-12f4-5b50-a3e8-f3e9c5409c1f` | both (read + write) | JSON: protocol version, `game`, `definitionVersion`, display handle, session `id` |
 | `WantFilter` | `7ed5862c-bb74-5bac-b452-5b9704f07772` | peripheral → central (read) | the peripheral's 16-byte Want filter (§5), raw |
 | `MyCandidates` | `4801119a-d9ba-599e-b27b-3e84414f847e` | central → peripheral (write) | the central's 16-byte Want filter, then its candidate card hashes |
 | `PeerCandidates` | `ff30764d-13af-5664-a7f3-ea1c71a1192f` | peripheral → central (read) | the peripheral's candidate card hashes |
@@ -592,11 +592,25 @@ the same for every game — only the *service* UUID is per-game.
 `Info` is a JSON object, the only text payload here:
 
 ```json
-{ "v": 1, "game": "swu", "definitionVersion": 5, "handle": "Pontus" }
+{ "v": 1, "game": "swu", "definitionVersion": 5, "handle": "Pontus",
+  "id": "3f2b8c1e-5a4d-4e0b-9c7a-1d2e3f4a5b6c" }
 ```
 
 `handle` is a self-chosen display name, not an identity (§8) — treat it as untrusted text from a
 stranger, truncate it for display, and never key anything on it.
+
+`id` is a **session id**: a random version-4 UUID in its canonical lowercase text form
+(`8-4-4-4-12` hex digits), generated when the app's trading session starts and never derived from
+anything else — no hardware or account identifier, no stored value. It is not shown to the user and
+not persisted. Its only purpose is to let a device recognize that two connections came from the
+same peer: every device runs both roles at once, so two devices that notice each other at about the
+same time each end up connected to the other, once as central and once as peripheral, and the
+platform identifiers the two roles report for one physical peer are unrelated and cannot be
+matched. A device that sees the same `id` from both roles knows it is one peer. An implementation
+SHOULD send `id`. A receiver MUST tolerate its absence, and MUST treat a value that is not a
+lowercase UUID as absent; without one it simply cannot recognize the peer across roles. Unknown
+fields in `Info` MUST be ignored, so a later revision can add fields without breaking this one. The
+`id` is unauthenticated (§9), and the same limits apply to it as to `handle`.
 
 `Info` is the one **bidirectional** characteristic: the central reads the peripheral's, and writes
 its own. An earlier draft had it read-only, which left the peripheral holding a completed exchange
@@ -730,6 +744,20 @@ repeat an exchange they have just finished:
   both halves (steps 4 and 5 done) it MAY still show that match to its own user, since only the
   peripheral's view of step 6 is at risk.
 
+- **Wait a random moment before connecting to a newly noticed peer**, then check again that
+  connecting is still worthwhile. Two devices that notice each other in the same instant would
+  otherwise both connect at once, which is the collision described under `id` in §6.1, and a
+  short random delay makes it likely that one of them finishes first. Reference implementation:
+  a uniform random delay of 0.1 s to 1.5 s, with at most one pending delay per peer, however many
+  times its advertisement is seen meanwhile.
+- **Recognize a peer that has already been handled.** Keep the session `id` of every peer with
+  whom an exchange has *completed* — in either role — for as long as the reconnect cooldown above.
+  After reading a peer's `Info` (step 2), a central that finds its `id` in that list SHOULD
+  disconnect without continuing. It MUST NOT skip because an exchange with that `id` is merely in
+  progress: if each of two devices saw the other's connection in progress and both stood down,
+  neither would ever exchange. Matches reported by the two roles for the same `id` SHOULD be shown
+  as one; the later result replaces the earlier.
+
 These numbers are tuning, not interoperability requirements; nothing on the wire depends on them.
 
 ### 6.4 Reciprocity: why `PeerCandidates` is gated
@@ -801,7 +829,8 @@ For a quick reference when reviewing an implementation against this spec, these 
 absences, not gaps to fill in without a product decision first:
 - No push notifications, no background operation.
 - No chat.
-- No accounts, no real identity — only a self-chosen display handle.
+- No accounts, no real identity — only a self-chosen display handle, and a random per-session id
+  used solely to recognize a peer across the two roles (§6.1).
 - No platform-specific transport (MultipeerConnectivity, Nearby Connections) in v1 — BLE only.
 - No internet-based/marketplace trading mode.
 
@@ -830,6 +859,9 @@ Tracked here rather than silently assumed:
   is a question for real use, and the answer may argue for a different discovery shape rather than
   a bigger filter, since the filter cannot grow past the §3.2 byte budget.
 - Nothing in this spec authenticates a peer or binds a display handle to anything. A peer can claim
-  any handle, and can advertise a Want list it has no intention of honoring. This is acceptable for
+  any handle, and can present any session `id` — including one it has learned from another peer's
+  `Info`, which makes a device stand down from that peer for the length of a cooldown. That is a
+  nuisance rather than a disclosure, and is accepted for the same reason as the handle. A peer can
+  also advertise a Want list it has no intention of honoring. This is acceptable for
   a protocol whose output is "go talk to that person", but it must not be extended toward anything
   resembling an unattended or committed trade without revisiting it.
