@@ -582,7 +582,7 @@ the same for every game — only the *service* UUID is per-game.
 
 | Characteristic | UUID | Direction | Contents |
 |---|---|---|---|
-| `Info` | `5694a89a-12f4-5b50-a3e8-f3e9c5409c1f` | peripheral → central (read) | JSON: protocol version, `game`, `definitionVersion`, display handle |
+| `Info` | `5694a89a-12f4-5b50-a3e8-f3e9c5409c1f` | both (read + write) | JSON: protocol version, `game`, `definitionVersion`, display handle |
 | `WantFilter` | `7ed5862c-bb74-5bac-b452-5b9704f07772` | peripheral → central (read) | the peripheral's 16-byte Want filter (§5), raw |
 | `MyCandidates` | `4801119a-d9ba-599e-b27b-3e84414f847e` | central → peripheral (write) | the central's 16-byte Want filter, then its candidate card hashes |
 | `PeerCandidates` | `ff30764d-13af-5664-a7f3-ea1c71a1192f` | peripheral → central (read) | the peripheral's candidate card hashes |
@@ -597,6 +597,13 @@ the same for every game — only the *service* UUID is per-game.
 
 `handle` is a self-chosen display name, not an identity (§8) — treat it as untrusted text from a
 stranger, truncate it for display, and never key anything on it.
+
+`Info` is the one **bidirectional** characteristic: the central reads the peripheral's, and writes
+its own. An earlier draft had it read-only, which left the peripheral holding a completed exchange
+it could not attribute to anybody — it knew which cards were wanted in both directions but had no
+name to show beside them. That is the same defect §6.3 step 6 fixes for the card data, reappearing
+for the peer's identity, and it would have left every peripheral-side user looking at an anonymous
+match. A central MUST write its `Info` before writing `MyCandidates`.
 
 ### 6.2 Card hashes on the wire
 
@@ -650,7 +657,8 @@ By the time two devices connect, each has (or can cheaply obtain) the other's fi
 already computed its own candidate list. Both directions are then resolved in one connection:
 
 1. Central connects to peripheral.
-2. Central reads `Info`, and `WantFilter` if it did not get the filter from the advertisement.
+2. Central reads `Info`, writes its own `Info`, and reads `WantFilter` if it did not get the filter
+   from the advertisement.
 3. Central writes `MyCandidates` — its own Want filter, followed by hashes of its Have-cards
    that hit the peripheral's filter.
 4. Peripheral checks `MyCandidates` against its own real Want list and notifies `Confirmed`.
@@ -663,7 +671,8 @@ already computed its own candidate list. Both directions are then resolved in on
    *The peripheral now knows what it holds that the central genuinely wants.*
 7. Central disconnects.
 
-Step 6 is what makes one connection sufficient. An earlier draft stopped at step 5 on the reasoning
+Steps 2 and 6 are what make one connection sufficient — 6 for the cards, 2 for the name to put
+beside them. An earlier draft stopped at step 5 on the reasoning
 that "each has already independently scanned the other's filter, so only one direction needs
 confirming over the wire". That is true of the *central* — which ends the exchange knowing both
 halves — but leaves the **peripheral knowing nothing confirmed at all**, unable to show its own user
