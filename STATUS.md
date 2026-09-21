@@ -35,7 +35,10 @@ branches.
 
 - The Swift now compiles. The first-ever compile of the ~3,000 lines across ten files produced a
   single error (`TradeWire.swift`, an unqualified static member), since fixed.
-- `TradeProtocolConformance.runDebugCheck()` ran and passed: 87 checks, no failures. The run
+- `TradeProtocolConformance.runDebugCheck()` ran and passed: 104 checks, no failures. 87 of them
+  are checks against the published vectors; the other 17 are implementation checks (session-id
+  decoding and encoding in `Info`, and `TradePeerLedger`) that pin down this app's own behaviour,
+  are NOT vectors, and do not read the vector file. The run
   needed a temporary call from app launch (not committed) and a command-line
   `IPHONEOS_DEPLOYMENT_TARGET=26.4` override, because the installed simulators are older than the
   project's 26.5 deployment target.
