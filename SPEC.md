@@ -586,7 +586,7 @@ the same for every game — only the *service* UUID is per-game.
 | `WantFilter` | `7ed5862c-bb74-5bac-b452-5b9704f07772` | peripheral → central (read) | the peripheral's 16-byte Want filter (§5), raw |
 | `MyCandidates` | `4801119a-d9ba-599e-b27b-3e84414f847e` | central → peripheral (write) | the central's 16-byte Want filter, then its candidate card hashes |
 | `PeerCandidates` | `ff30764d-13af-5664-a7f3-ea1c71a1192f` | peripheral → central (read) | the peripheral's candidate card hashes |
-| `Confirmed` | `d5b48536-a5c6-5b4a-a47c-b71e522615b1` | peripheral → central (notify) | the subset of `MyCandidates` the peripheral genuinely wants |
+| `Confirmed` | `d5b48536-a5c6-5b4a-a47c-b71e522615b1` | peripheral → central (read) | the subset of `MyCandidates` the peripheral genuinely wants; empty until `MyCandidates` has been written |
 | `PeerConfirmed` | `a6847f91-12e6-5d80-9f38-9af20b2e807e` | central → peripheral (write) | the subset of `PeerCandidates` the central genuinely wants |
 
 `Info` is a JSON object, the only text payload here:
@@ -660,16 +660,21 @@ already computed its own candidate list. Both directions are then resolved in on
 2. Central reads `Info`, writes its own `Info`, and reads `WantFilter` if it did not get the filter
    from the advertisement.
 3. Central writes `MyCandidates` — its own Want filter, followed by hashes of its Have-cards
-   that hit the peripheral's filter.
-4. Peripheral checks `MyCandidates` against its own real Want list and notifies `Confirmed`.
-   *The central now knows what it holds that the peripheral genuinely wants.*
+   that hit the peripheral's filter. This MUST be a write *with response*, and the central MUST
+   wait for the response before step 4.
+4. Peripheral checks `MyCandidates` against its own real Want list and keeps the result, per
+   central, as the value of `Confirmed`. The peripheral MUST have done this before it responds to
+   the step-3 write, so that a completed write means the answer exists. Central then reads
+   `Confirmed`. *The central now knows what it holds that the peripheral genuinely wants.*
 5. Central reads `PeerCandidates` — hashes of the peripheral's Have-cards that hit the central's
    filter, which the peripheral can now compute from the filter supplied in step 3. The peripheral
    MUST refuse this read (or return an empty payload) until step 3 has occurred; see §6.4.
 6. Central checks `PeerCandidates` **locally**, against the hashes of its own real Want list
-   already on device, and writes the surviving hashes back as `PeerConfirmed`.
+   already on device, and writes the surviving hashes back as `PeerConfirmed`, again with response.
    *The peripheral now knows what it holds that the central genuinely wants.*
-7. Central disconnects.
+7. Once the `PeerConfirmed` write has been acknowledged (or has failed), central disconnects. It
+   MUST NOT disconnect straight after queuing that write: a disconnect issued alongside it can
+   drop the write, leaving the peripheral without its half.
 
 Steps 2 and 6 are what make one connection sufficient — 6 for the cards, 2 for the name to put
 beside them. An earlier draft stopped at step 5 on the reasoning
@@ -679,9 +684,53 @@ halves — but leaves the **peripheral knowing nothing confirmed at all**, unabl
 the match. The peripheral would learn of it only when it re-ran the entire exchange in the central
 role against the same peer, so the supposed saving was a duplicated connection, not a halved one.
 
+**`Confirmed` is read, not notified.** An earlier draft had the peripheral push `Confirmed` as a
+GATT notification. That does not survive contact with the transport, and is recorded so nobody
+reinstates it:
+
+- A notification must fit in a single ATT packet — the negotiated MTU minus 3 bytes, which can be as
+  little as 20 — and unlike reads and writes there is no long-notification mechanism. `Confirmed`
+  can be up to 192 bytes (§6.2). A payload that does not fit is truncated or dropped. Cut
+  mid-hash, it is not a whole number of hashes and a receiver following §6.2 rejects it; cut on a
+  hash boundary, it is silently shorter. Either way the failure looks like "the peer wants less of
+  yours than it does", with no error to see.
+- A notification goes to whichever centrals are subscribed unless the peripheral addresses it to
+  one. With several exchanges in flight, an unaddressed notification hands one central another
+  central's answer.
+- It needs a subscription that is confirmed to be in place before step 3, and a failure to
+  subscribe is silent.
+
+None of that machinery is needed, because the answer is already there when the central asks. The
+peripheral computes it inside the step-3 write and holds it before responding, so the write's own
+response is the "ready" signal. A read then carries up to 192 bytes through the ordinary long-read
+path, is answered only to the central that asked, and fails visibly if it fails. `Confirmed` is
+therefore a plain readable characteristic, like `PeerCandidates`. It is per central: a peripheral
+MUST return, to each central, only the answer to that central's own `MyCandidates`, and an empty
+payload to a central that has not yet written one. A central MUST NOT read `Confirmed` before the
+step-3 write has completed successfully; an empty payload is otherwise indistinguishable from
+"the peripheral wants none of these".
+
 Do not hold the connection open past this exchange. Cache the confirmed results locally and
 continue scanning — this keeps the number of simultaneous BLE connections small regardless of how
 many candidates are nearby (see §7 for how a busy room is handled).
+
+**Bounding an exchange.** Implementations SHOULD NOT let one peer stall the others, and SHOULD NOT
+repeat an exchange they have just finished:
+
+- Apply a timeout to connecting and a separate one to the exchange itself, and abandon the
+  exchange when either expires. A pending connection that never completes holds one of the small
+  number of connection slots forever, and some platforms (Core Bluetooth among them) report
+  nothing for it. Reference implementation: 10 s to connect, 20 s for the exchange counted from
+  when the link comes up.
+- After an exchange, do not reconnect to the same peer for a while. With duplicate advertisements
+  reported, a stationary pair would otherwise reconnect on every scan callback (the §3.2 filter
+  cache does not prevent this: it only dismisses peers with nothing for you). Reference
+  implementation: 60 s after an exchange that reached a result, 10 s after one abandoned earlier.
+- Treat a write that fails at any step as the end of the exchange. If the central already holds
+  both halves (steps 4 and 5 done) it MAY still show that match to its own user, since only the
+  peripheral's view of step 6 is at risk.
+
+These numbers are tuning, not interoperability requirements; nothing on the wire depends on them.
 
 ### 6.4 Reciprocity: why `PeerCandidates` is gated
 
@@ -700,6 +749,10 @@ That the slice travels as hashes rather than identities (§6.2) changes none of 
 over a card from a small, fully enumerable catalog, so anyone can build the reverse table once and
 read the slice straight off — it is a size optimization, exactly like the Bloom filter, and must
 never be described as obscuring anything.
+
+`Confirmed` needs no such gate. It is a subset of the hashes the central itself supplied in
+`MyCandidates`, so reading it discloses nothing the reader did not already hold; it is empty before
+the write only because there is nothing to compute it from (§6.3 step 4).
 
 The gate therefore makes exposure *symmetric and simultaneous*: a peer learns a bounded slice of
 your Have list only after committing an equally bounded slice of its own, and both slices are

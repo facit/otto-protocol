@@ -43,15 +43,15 @@ branches.
 **Not verified at all:**
 
 - **No BLE code has been near a radio.** Advertising, connection handling, the long-read path, the
-  notify race — none of it observed. Compiling says nothing about behaviour here. Two physical
-  devices are required; the simulator cannot do it.
+  write-then-read ordering of steps 3–4 — none of it observed. Compiling says nothing about
+  behaviour here. Two physical devices are required; the simulator cannot do it.
 - The conformance runner is deliberately **not** wired into startup — call it from a debug menu or
   a breakpoint.
 
 ## Next steps, roughly in value order
 
-1. **Build it.** Highest value by a wide margin. Then run `runDebugCheck()`. If a vector fails, the
-   vectors are the published contract — the Swift is what changed.
+1. ~~**Build it.**~~ Done: it builds and `runDebugCheck()` passes (see above). If a vector ever
+   fails, the vectors are the published contract — the Swift is what changed.
 2. **Hardware bring-up on two devices.** The one open question the design cannot answer on its own:
    whether an iOS peripheral's filter-carrying second service UUID is visible to a scanner (iOS and
    Android both) rather than landing in Apple's overflow area. §3.2 and §9. Correctness does not
@@ -63,6 +63,11 @@ branches.
 
 ## Known gaps and deliberate exclusions
 
+- **Open items from a desk review of the BLE services** (found by reading, not on a radio):
+  the peripheral never expires `PeerState` for a central that disconnects before `PeerConfirmed`;
+  `PeerCandidates` is recomputed on every long-read chunk instead of once per exchange;
+  `didDiscoverServices` takes `services?.first` without checking it is the game's service UUID;
+  `cachedFilters` is never pruned.
 - Tokens are out of scope by decision (§1, §4.4.3) — `collectorNumber` is an integer, which
   excludes them by construction.
 - The SOR and SHD printed-total-02 promo runs are absent from `sets`, so their cards cannot be
