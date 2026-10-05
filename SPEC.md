@@ -430,7 +430,8 @@ distinguish by looking.
 So the blocker is data, not mechanism, and the honest interim position is the one the definition
 file takes — those print runs are absent from `sets` entirely, so their cards cannot be traded
 rather than being tradeable-but-ambiguous. Excluding a card is recoverable; shipping an identity
-that silently conflates two different cards is not.
+that silently conflates two different cards is not. Definition version 6 (which added HMW, HMWP and
+CST) deliberately left this position unchanged: the printed-total-02 runs are still absent.
 
 Two things follow for anyone extending this spec:
 
@@ -592,7 +593,7 @@ the same for every game — only the *service* UUID is per-game.
 `Info` is a JSON object, the only text payload here:
 
 ```json
-{ "v": 1, "game": "swu", "definitionVersion": 5, "handle": "Pontus",
+{ "v": 1, "game": "swu", "definitionVersion": 6, "handle": "Pontus",
   "id": "3f2b8c1e-5a4d-4e0b-9c7a-1d2e3f4a5b6c" }
 ```
 
@@ -842,7 +843,12 @@ Tracked here rather than silently assumed:
   application's internal naming rather than confirmed printed codes, and are flagged as such in the
   file's own `notes`. Each needs checking against `canonicalSource` before it can be treated as
   authoritative. Until then, cards in those sets may fail rule 4 of §4.5 on a peer using a
-  differently-named definition file.
+  differently-named definition file. Version 6 added CST (Costco Exclusives) under the same flag.
+- **Some catalog cards have no recorded finish, and hash as `standard`.** The app treats an unknown
+  finish (`null` in its finish map) as standard. Version 6 kept that rule on purpose, including for
+  promos that may in fact be foil (for example P26/122 and P26/216–236), because changing it would
+  change the hash of identities already tradeable under version 5 (§4.2's hard rule). Correcting
+  them needs a decision on how to migrate, not just a data fix.
 - **Whether a scanner can read a second 128-bit service UUID from an iOS peripheral, on both iOS
   and Android, is unverified on hardware** (§3.2). The protocol is designed so the answer does not
   affect correctness — `WantFilter` covers the negative case — but it determines whether iOS peers

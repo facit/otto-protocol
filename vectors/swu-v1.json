@@ -18,7 +18,7 @@
   },
   "definition": {
     "game": "swu",
-    "definitionVersion": 5
+    "definitionVersion": 6
   },
   "encodings": [
     {
@@ -151,6 +151,69 @@
         123,
         78,
         33
+      ]
+    },
+    {
+      "note": "definitionVersion 6: a Hyperspace Foil in the distinct-numbering era has its own number (HMW 610 Torrent, the foil twin of Hyperspace 372)",
+      "input": {
+        "setCode": "HMW",
+        "collectorNumber": 610,
+        "finish": "foil"
+      },
+      "canonical": {
+        "setCode": "HMW",
+        "collectorNumber": 610,
+        "finish": "foil"
+      },
+      "canonicalBytesHex": "01484d5701000002620001666f696c00",
+      "fnv1a64Hex": "809655e5ff27570a",
+      "bitIndices": [
+        101,
+        111,
+        121,
+        3
+      ]
+    },
+    {
+      "note": "definitionVersion 6: weekly-play foil, the foil twin of HMWP 5",
+      "input": {
+        "setCode": "HMWP",
+        "collectorNumber": 25,
+        "finish": "foil"
+      },
+      "canonical": {
+        "setCode": "HMWP",
+        "collectorNumber": 25,
+        "finish": "foil"
+      },
+      "canonicalBytesHex": "01484d575001000000190001666f696c00",
+      "fnv1a64Hex": "556adb4fc298e923",
+      "bitIndices": [
+        79,
+        114,
+        21,
+        56
+      ]
+    },
+    {
+      "note": "definitionVersion 6: a single-run, single-finish code marked 'shared' that still carries no printedTotal because the code has one run",
+      "input": {
+        "setCode": "CST",
+        "collectorNumber": 2,
+        "finish": "foil"
+      },
+      "canonical": {
+        "setCode": "CST",
+        "collectorNumber": 2,
+        "finish": "foil"
+      },
+      "canonicalBytesHex": "0143535401000000020001666f696c00",
+      "fnv1a64Hex": "5e755656fa7bfc66",
+      "bitIndices": [
+        86,
+        60,
+        34,
+        8
       ]
     }
   ],
@@ -296,6 +359,16 @@
         "finish": "standard"
       },
       {
+        "setCode": "HMW",
+        "collectorNumber": 1,
+        "finish": "standard"
+      },
+      {
+        "setCode": "HMWP",
+        "collectorNumber": 1,
+        "finish": "standard"
+      },
+      {
         "setCode": "IBH",
         "collectorNumber": 1,
         "finish": "standard"
@@ -362,22 +435,10 @@
         "collectorNumber": 10,
         "printedTotal": 20,
         "finish": "standard"
-      },
-      {
-        "setCode": "SOR",
-        "collectorNumber": 10,
-        "printedTotal": 252,
-        "finish": "standard"
-      },
-      {
-        "setCode": "TWI",
-        "collectorNumber": 10,
-        "printedTotal": 257,
-        "finish": "standard"
       }
     ],
-    "filterHex": "2fb91820c29b1f11935c866338fa8d79",
-    "bitsSet": 61,
+    "filterHex": "2f391820c29b1f15935cc67338fa0d73",
+    "bitsSet": 62,
     "queries": [
       {
         "note": "a member \u2014 must be a hit",
@@ -391,18 +452,19 @@
       {
         "note": "a genuine FALSE POSITIVE: not in the want list, but every one of its four bits is set by other members. An implementation that does not report a hit here has diverged in the hash or the bit layout.",
         "identity": {
-          "setCode": "SEC",
-          "collectorNumber": 1006,
-          "finish": "foil"
+          "setCode": "SOR",
+          "collectorNumber": 10,
+          "printedTotal": 252,
+          "finish": "standard"
         },
         "expectHit": true
       },
       {
         "note": "a true negative",
         "identity": {
-          "setCode": "SHD",
+          "setCode": "TWI",
           "collectorNumber": 10,
-          "printedTotal": 262,
+          "printedTotal": 257,
           "finish": "standard"
         },
         "expectHit": false
@@ -411,11 +473,11 @@
   },
   "known_gaps": {
     "tokensOutOfScope": {
-      "count": 56,
+      "count": 66,
       "note": "Tokens (collector numbers T001 etc.) are deliberately not expressible: collectorNumber is declared an integer, which excludes them by construction. This is a settled scope decision, not a gap to close \u2014 see SPEC.md 1 and 4.4.3."
     },
     "unknownFinish": {
-      "count": 424,
+      "count": 423,
       "note": "Cards whose finish the source catalog does not record. Excluded here because the vectors must not assert a finish nothing verified."
     },
     "excludedPrintRuns": {

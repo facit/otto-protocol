@@ -6,6 +6,21 @@ messages, which are deliberately long for that reason.
 
 Last updated at `trade-protocol/implementation` head "Add the BLE transport layer".
 
+## Definition version 6
+
+`definitions/swu.json` is at `definitionVersion` 6. It adds HMW and HMWP (releaseOrder 9, distinct
+numbering) and CST (releaseOrder 9, shared, `verified: false`, one run so no printedTotal). SOR-2 and
+SHD-2 are still absent. The app's `finish_map.json` was replaced at the same time (HMW, HMWP, CST and
+more P26 entries); existing entries are unchanged, and the 22 new P26 entries for cards that were
+already tradeable (P26/122, P26/216–236) are `null`, so they keep hashing as `standard` exactly as
+in version 5.
+
+Checked with the mapping oracle over the whole app catalog, v5 against v6: the only changed lines
+are 1,972 that went from `notCanonical` to `ok` (HMW 1,888, HMWP 80, CST 4). No line that was
+already `ok` changed its hash. The vectors were regenerated (they were already stale against the
+catalog) and gained three encoding vectors (HMW 610 foil, HMWP 25 foil, CST 2 foil). The iOS
+in-app conformance run (`runDebugCheck()`) has not been rerun against v6; that needs an Xcode build.
+
 ## Branches
 
 | Branch | Contains | Based on |
@@ -29,7 +44,8 @@ branches.
   `reference.py`. Also runs a self-test of §4.5 rule 7 in both directions.
 - `python3 trade-protocol/check_app_bundle.py` — the app's bundled JSON copies are byte-identical
   to the canonical files.
-- All 8,587 expressible SWU card identities canonicalize cleanly against the real catalog.
+- All 9,586 expressible SWU card identities canonicalize cleanly against the real catalog
+  (definitionVersion 6).
 
 **Verified on the Mac (Xcode 27.0, iPhone 17 simulator, iOS 26.4.1):**
 
@@ -75,7 +91,7 @@ branches.
   programmes share a set code and collector number. `knownCollisions` is the mechanism; the blocker
   is that nobody has established how to tell the two cards apart physically, and §4.6 requires that.
   Registering it with a nominal description would pass every check and be worthless at the table.
-- 8 of 28 print runs are `verified: false` — wording unconfirmed against `canonicalSource`, not
+- 9 of 31 print runs are `verified: false` — wording unconfirmed against `canonicalSource`, not
   substance. The canonical source is partly wrong and partly missing here.
 - The app's `cardId` has no equivalent of `variantKey`, so it inherits the collision problem with
   no way to express it. That is an app-side design question, not a protocol one.

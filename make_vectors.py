@@ -177,6 +177,14 @@ def main() -> int:
         encoding_vector({"setCode": "SHD", "collectorNumber": 262, "printedTotal": 262,
                          "finish": "standard"},
                         "collectorNumber equal to printedTotal — the last card in its set"),
+        encoding_vector({"setCode": "HMW", "collectorNumber": 610, "finish": "foil"},
+                        "definitionVersion 6: a Hyperspace Foil in the distinct-numbering era has "
+                        "its own number (HMW 610 Torrent, the foil twin of Hyperspace 372)"),
+        encoding_vector({"setCode": "HMWP", "collectorNumber": 25, "finish": "foil"},
+                        "definitionVersion 6: weekly-play foil, the foil twin of HMWP 5"),
+        encoding_vector({"setCode": "CST", "collectorNumber": 2, "finish": "foil"},
+                        "definitionVersion 6: a single-run, single-finish code marked 'shared' "
+                        "that still carries no printedTotal because the code has one run"),
     ]
 
     rejections = [
