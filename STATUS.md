@@ -4,7 +4,7 @@ Where this stands, what is actually verified, and what to pick up next. Written 
 session it was produced in; the *reasoning* behind each decision is in `SPEC.md` and in the commit
 messages, which are deliberately long for that reason.
 
-Last updated at `trade-protocol/implementation` head "Add the BLE transport layer".
+Last updated on `trade/definition-v6` after the trade fixes and trade builder groundwork (October 2026).
 
 ## Definition version 6
 
@@ -76,10 +76,33 @@ branches.
    whether an iOS peripheral's filter-carrying second service UUID is visible to a scanner (iOS and
    Android both) rather than landing in Apple's overflow area. §3.2 and §9. Correctness does not
    depend on it — `WantFilter` covers the negative case — but scan cost in a busy room does.
-3. **Trade UI.** Nothing exists. `TradeSession` publishes `matches`, `isRunning` and
-   `wantListProblem` and is ready to bind to.
-4. **Wire it into the app.** No entry point, no settings toggle, no entitlement gating.
-   `TradeSession.wantListChanged()` is never called by anything.
+3. ~~**Trade UI.**~~ Done: `TradeView` (card art and names, nearby players, "N for M", Pause,
+   the want picker) and the DEBUG-only `TradeDebugView`.
+4. ~~**Wire it into the app.**~~ Done: Trade opens from the Home screen and from the Collection
+   tab's toolbar. It is free (no entitlement) and has no settings toggle, on purpose — see
+   TradeView.swift's header. `TradeSession.wantListChanged()` is called by TradeView's debounced
+   binder subscription and when the want picker saves.
+
+Added by the trade fixes work (October 2026), all local to one phone — the protocol, SPEC and
+vectors are unchanged:
+
+- Matches resolve against our own lists only: what a peer wants from us against Have, what we
+  want against Want, with the foil flag kept (`TradeMatchCard`).
+- Confirmations are intersected with the hashes actually sent; the peripheral ignores peers that
+  sent no Info; only acceptable filters are cached.
+- `TradeInventory` caches its hash tables until `invalidate()`, and the trade name is read live.
+- The 24-card cap is re-checked on every want-list change: trading suspends when over and resumes
+  when back under, unless the user paused.
+- Bluetooth state is reported by both services and shown (`TradeRadioState`, `TradeSession.radio`)
+  instead of "Searching" forever.
+- One status decision for headline, badge, spinner and VoiceOver (`TradeStatusPresentation`);
+  status changes are spoken; the want picker summarises chosen and not-offered cards and asks
+  before offering none (`TradeWantSelectionSummary`).
+- Groundwork for building and completing a trade on one phone, with history and undo:
+  `TradeProposal`, `TradeCompletionPlan`, `TradeHistory`, `ItemValuation`, `BinderStore+Trade`.
+  Their screens are not built yet.
+- Match expiry rules exist (`TradeMatchRules`) but are not yet used by `TradeSession`.
+- Unit tests: `SWU scanTests` (Xcode) and the Foundation-only subset in `tools/linux_tests`.
 
 ## Known gaps and deliberate exclusions
 
