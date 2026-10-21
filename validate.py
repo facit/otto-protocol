@@ -9,14 +9,17 @@ Schema validation itself is deliberately NOT reimplemented here: use a real JSON
 (`pip install jsonschema`), which this script will use if it is importable and otherwise skip with
 a warning rather than pretending to have checked.
 
-NOT CHECKED HERE: SPEC.md 4.6 rule 6 (definitionVersion increased, and no already-published
-printedTotal or finishNumbering changed value). That rule compares a file against its own previous
-revision, which this script does not have — it needs the diff, so it belongs in the CI job that
-already knows the base revision, not here. Nothing below enforces it; do not read a green run as
-covering it.
+SPEC.md 4.6 rule 6 compares a file against its own previous revision. Given that revision with
+--base, this script checks the part of it that is a pure list comparison: `finishes` is
+append-only (every earlier value keeps its position, because the negotiation feature sends a
+finish as its index, SPEC.md 6.5.4), and definitionVersion increased if anything changed.
+NOT CHECKED even then: that no already-published printedTotal or finishNumbering changed value.
+Matching print runs across revisions needs judgement, so that stays with the CI job (or reviewer)
+that knows the base revision; do not read a green run as covering it.
 
-    python3 validate.py                 # every file in definitions/
-    python3 validate.py path/to/x.json  # just this one
+    python3 validate.py                                   # every file in definitions/
+    python3 validate.py path/to/x.json                    # just this one
+    python3 validate.py --base old/x.json path/to/x.json  # also rule 6 against the old revision
 
 Exits non-zero if any file fails.
 """
@@ -102,6 +105,20 @@ def check(doc: dict, name: str) -> list[str]:
     return bad
 
 
+def check_against_base(doc: dict, base: dict) -> list[str]:
+    """SPEC.md 4.6 rule 6, the parts that need no judgement: finishes append-only, and
+    definitionVersion increased when the file changed."""
+    bad: list[str] = []
+    old, new = base.get("finishes", []), doc.get("finishes", [])
+    if new[:len(old)] != old:
+        bad.append(f"finishes is append-only (rule 6): the previous revision's {old!r} must be "
+                   f"a prefix of {new!r}; a finish is sent as its index (SPEC.md 6.5.4)")
+    if doc != base and not doc.get("definitionVersion", 0) > base.get("definitionVersion", 0):
+        bad.append(f"definitionVersion must increase when the file changes (rule 6): "
+                   f"{base.get('definitionVersion')!r} -> {doc.get('definitionVersion')!r}")
+    return bad
+
+
 def validate_schema(doc: dict, name: str) -> list[str]:
     try:
         import jsonschema
@@ -115,7 +132,15 @@ def validate_schema(doc: dict, name: str) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
-    paths = [pathlib.Path(a) for a in argv[1:]] or sorted((ROOT / "definitions").glob("*.json"))
+    args = argv[1:]
+    base = None
+    if args and args[0] == "--base":
+        if len(args) != 3:
+            print("usage: validate.py --base OLD.json NEW.json", file=sys.stderr)
+            return 2
+        base = json.loads(pathlib.Path(args[1]).read_text(encoding="utf-8"))
+        args = args[2:]
+    paths = [pathlib.Path(a) for a in args] or sorted((ROOT / "definitions").glob("*.json"))
     if not paths:
         print("no definition files found", file=sys.stderr)
         return 1
@@ -124,6 +149,8 @@ def main(argv: list[str]) -> int:
     for path in paths:
         doc = json.loads(path.read_text(encoding="utf-8"))
         problems = validate_schema(doc, path.name) + check(doc, path.name)
+        if base is not None:
+            problems += check_against_base(doc, base)
         if problems:
             failed += 1
             print(f"FAIL {path}")
