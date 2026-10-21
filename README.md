@@ -12,10 +12,11 @@ implementable without guessing.
 | [`SPEC.md`](SPEC.md) | The protocol. Read §4 and §5 before writing any matching code. |
 | [`schema/game-definition.schema.json`](schema/game-definition.schema.json) | JSON Schema every per-game definition file must validate against. |
 | [`definitions/swu.json`](definitions/swu.json) | The *Star Wars: Unlimited* definition file, and the worked example throughout the spec. |
-| [`reference.py`](reference.py) | Executable reference implementation of canonicalization, encoding, hashing and the filter. Dependency-free, game-agnostic, no transport. |
-| [`vectors/swu-v1.json`](vectors/swu-v1.json) | Conformance test vectors. Generated from `reference.py`. |
-| [`validate.py`](validate.py) | Checks a definition file against the rules §4.6 says the JSON Schema structurally cannot enforce. |
-| [`make_vectors.py`](make_vectors.py) | Regenerates the vectors; `--check` asserts they still match `reference.py`. |
+| [`reference.py`](reference.py) | Executable reference implementation of canonicalization, encoding, hashing and the filter, and of the optional negotiation feature (§6.5): message and receipt codecs, line ordering, hash resolution, feature discovery and the state machine as a pure function. Dependency-free, game-agnostic, no transport. |
+| [`vectors/swu-v1.json`](vectors/swu-v1.json) | Conformance test vectors for §4–§6.2. Generated from `reference.py`. |
+| [`vectors/negotiation-v1.json`](vectors/negotiation-v1.json) | Conformance vectors for the negotiation feature (§6.5, format 1), with `swu` as the worked example: message, receipt and rejection bytes, feature discovery, and state-machine scenarios as plain data. Generated from `reference.py`. |
+| [`validate.py`](validate.py) | Checks a definition file against the rules §4.6 says the JSON Schema structurally cannot enforce; with `--base OLD.json`, also that `finishes` stayed append-only and `definitionVersion` increased. |
+| [`make_vectors.py`](make_vectors.py) | Regenerates both vector files; `--check` asserts they still match `reference.py`. It also runs self-tests, including a replay of the negotiation vectors from their own data. |
 | [`testdata/swu-catalog-sample.json`](testdata/swu-catalog-sample.json) | A small vendored sample of real card identities that `make_vectors.py` builds the vectors from. Test data, not a catalog. |
 | [`check_app_bundle.py`](check_app_bundle.py) | App tooling, not part of the protocol: `python3 check_app_bundle.py /path/to/app-repo` checks that an app's bundled copies of the definition and vectors are byte-identical to the files here. |
 
@@ -45,6 +46,16 @@ Work in this order:
 4. **Rejection.** Every entry in `rejections` must be refused, not repaired. §4.5 explains why
    repairing is worse than rejecting: a "fixed" identity is a different card.
 5. **Transport.** Only now §3, §6 and §7. Nothing in the reference implementation covers these.
+6. **Negotiation (optional, §6.5).** Only if you offer trade suggestions. In
+   `vectors/negotiation-v1.json`: first the codecs — decode every `messages` entry from
+   `bytesHex` and encode it back, decode every `receipts` entry, refuse every `invalidReceipts`
+   value, and give every `rejections` entry exactly its expected ATT error or receipt bytes
+   (the order of checks in §6.5.6 matters: some inputs break two rules). Check `features` and
+   `lineNormalization`. Then the `scenarios`: build each device from its entry in `devices`, feed
+   every step's event to it in order, and compare the output and the state snapshot; they are
+   plain data so your own state machine can replay them without any of this repository's code.
+   Only then the transport of §6.5.3: the `Negotiation` characteristic, delivery by session id,
+   and a real 494-byte write on real hardware.
 
 ## Definition files
 

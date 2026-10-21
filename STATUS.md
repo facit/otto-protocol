@@ -6,6 +6,18 @@ messages, which are deliberately long for that reason.
 
 Last updated on `trade/definition-v6` after the trade fixes and trade builder groundwork (October 2026).
 
+## Negotiation feature (October 2026)
+
+New optional feature `negotiation`, format 1 (SPEC §6.5): structured trade suggestions between two
+matched peers over a new `Negotiation` characteristic (`a2ec42c3-94c1-594e-9297-00f4778f2915`,
+derived like the others), declared in `Info.features`. Lines carry an optional condition byte.
+Nothing in §§3–6.4 changed on the wire; `swu-v1.json` is byte-identical. `reference.py` implements
+it, `vectors/negotiation-v1.json` pins it down, `make_vectors.py --check` covers both files and
+replays the scenarios. `finishes` is now append-only (§4.2, §4.6 rule 6; `validate.py --base`).
+The repository is self-contained: the vectors build from `testdata/swu-catalog-sample.json`, not
+from an app's catalog, and `check_app_bundle.py` takes the app path as an argument. Not yet
+implemented in any app; no transport of it has been near a radio.
+
 ## Definition version 6
 
 `definitions/swu.json` is at `definitionVersion` 6. It adds HMW and HMWP (releaseOrder 9, distinct
