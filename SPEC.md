@@ -18,7 +18,9 @@ it. Companion files:
 - [`reference.py`](reference.py) — an executable reference implementation of §4.5, §5.2 and §5.5,
   and [`vectors/swu-v1.json`](vectors/swu-v1.json), the conformance vectors generated from it. An
   implementation that reproduces those bytes agrees with this document about the parts where
-  disagreement would otherwise be invisible.
+  disagreement would otherwise be invisible. `reference.py` also implements the optional trade
+  negotiation feature (§6.5), whose vectors are
+  [`vectors/negotiation-v1.json`](vectors/negotiation-v1.json).
 - [`README.md`](README.md) — orientation for a third-party implementer.
 
 ## 1. Scope
@@ -29,6 +31,8 @@ it. Companion files:
 - Works entirely offline — no internet connection required by either device.
 - Works across platforms (an iOS app and an Android app implementing this spec can trade with each
   other) and across card games (a definition file, described in §4, is how a game plugs in).
+- Optionally (§6.5), two matched people agreeing on a concrete trade from their phones: a structured
+  suggestion of cards to give and get, which the other side can accept, decline or change.
 
 **Explicitly out of scope for v1** — noted so implementers don't assume these are missing by
 accident:
@@ -39,7 +43,9 @@ accident:
 - **Discovery when the app isn't open.** No background scanning/advertising, no push
   notifications, no server. A match is only found while both apps are active.
 - **Chat or any messaging between matched users.** Out of scope by product decision, not a
-  technical limitation — nothing here prevents adding it later.
+  technical limitation — nothing here prevents adding it later. The optional negotiation feature
+  (§6.5) does not change this: it carries structured trade suggestions (card hashes, quantities and
+  an optional condition grade) and their answers, never free text.
 - **Real identity.** Users are shown a self-chosen display handle, never a real name or account
   identity — there are no accounts.
 - **A general internet/marketplace trading mode.** A fundamentally different feature (needs
@@ -194,7 +200,7 @@ fields:
 | `definitionVersion` | Increments on any change to this file. **Hard rule: an identifier already constructible under an older version must resolve identically under every later version.** Additions are fine; redefining or reusing an existing meaning is not. |
 | `canonicalSource` | `{ name, url }` — the authoritative catalog this file defers to. Disputes about correctness are resolved by checking here, not by discussion. |
 | `identifier.fields` | Ordered list of the named, typed fields that make up this game's card identity (see below). |
-| `finishes` | A **closed vocabulary** of finish names (e.g. `["standard", "foil"]`) — not free text. If a value isn't listed, it isn't valid for this game. This exists specifically so two independent implementers can't quietly diverge on naming the same concept differently (e.g. "foil" vs. "holo"). |
+| `finishes` | A **closed vocabulary** of finish names (e.g. `["standard", "foil"]`) — not free text. If a value isn't listed, it isn't valid for this game. This exists specifically so two independent implementers can't quietly diverge on naming the same concept differently (e.g. "foil" vs. "holo"). **Append-only:** the negotiation feature sends a finish as its index in this array (§6.5.4), so a later version may add values at the end but never remove, reorder or rename one (§4.6 rule 6). |
 | `sets` | One entry per **print run**, `{ code, name, releaseOrder, finishNumbering, printedTotal? }`. Several entries may share a `code` when one printed set code covers more than one run; `printedTotal` is then required on each and is what tells them apart (§4.4.2). `finishNumbering` declares whether that run numbers foils separately (§4.4.1). Not merely descriptive — §4.5 makes it load-bearing for canonicalization. |
 
 Optional: `knownCollisions` (§4.6).
@@ -408,7 +414,9 @@ request, same as schema validation:
    distinguish them.
 6. `definitionVersion` has increased relative to the file being replaced, and no existing
    `sets` entry's `printedTotal` or `finishNumbering` has changed value — either would silently
-   re-point identities that already exist on users' devices (§4.2's hard rule).
+   re-point identities that already exist on users' devices (§4.2's hard rule). `finishes` is
+   append-only: the previous revision's array is a prefix of the new one, because its indices are
+   on the wire (§6.5.4).
 
 #### 4.6.1 A real collision, and why it is not registered yet
 
@@ -450,8 +458,11 @@ repository), reviewed and merged by a maintainer, and validated in CI against th
 the cross-referential checks in §4.6. [`validate.py`](validate.py) implements those checks and is
 the script referred to throughout this section; run it on every pull request that touches
 `definitions/`. It deliberately does not reimplement JSON Schema validation (use a real validator
-alongside it), and it cannot check rule 6, which compares a file against its own previous revision
-— that one belongs in the CI job that knows the base revision.
+alongside it). Rule 6 compares a file against its own previous revision, so it needs the CI job
+that knows the base revision: given that revision (`validate.py --base OLD.json NEW.json`) the
+script checks that `finishes` is append-only and that `definitionVersion` increased, but not that
+no `printedTotal` or `finishNumbering` changed, which needs a reviewer to match print runs across
+the two revisions.
 
 `canonicalSource` is the tiebreaker for factual disputes.
 
@@ -589,12 +600,13 @@ the same for every game — only the *service* UUID is per-game.
 | `PeerCandidates` | `ff30764d-13af-5664-a7f3-ea1c71a1192f` | peripheral → central (read) | the peripheral's candidate card hashes |
 | `Confirmed` | `d5b48536-a5c6-5b4a-a47c-b71e522615b1` | peripheral → central (read) | the subset of `MyCandidates` the peripheral genuinely wants; empty until `MyCandidates` has been written |
 | `PeerConfirmed` | `a6847f91-12e6-5d80-9f38-9af20b2e807e` | central → peripheral (write) | the subset of `PeerCandidates` the central genuinely wants |
+| `Negotiation` | `a2ec42c3-94c1-594e-9297-00f4778f2915` | both (write + read) | optional: present only on devices that implement the negotiation feature (§6.5) |
 
 `Info` is a JSON object, the only text payload here:
 
 ```json
 { "v": 1, "game": "swu", "definitionVersion": 6, "handle": "Pontus",
-  "id": "3f2b8c1e-5a4d-4e0b-9c7a-1d2e3f4a5b6c" }
+  "id": "3f2b8c1e-5a4d-4e0b-9c7a-1d2e3f4a5b6c", "features": { "negotiation": 1 } }
 ```
 
 `handle` is a self-chosen display name, not an identity (§8) — treat it as untrusted text from a
@@ -611,7 +623,22 @@ matched. A device that sees the same `id` from both roles knows it is one peer. 
 SHOULD send `id`. A receiver MUST tolerate its absence, and MUST treat a value that is not a
 lowercase UUID as absent; without one it simply cannot recognize the peer across roles. Unknown
 fields in `Info` MUST be ignored, so a later revision can add fields without breaking this one. The
-`id` is unauthenticated (§9), and the same limits apply to it as to `handle`.
+`id` is unauthenticated (§9), and the same limits apply to it as to `handle`. While a negotiation
+(§6.5) is open, a device keeps its `id` (§6.5.3).
+
+`features` is optional and declares the **optional features** the sender implements: an object
+whose keys are feature names and whose values are the highest version of that feature the sender
+implements, a positive integer. A receiver MUST ignore feature names it does not know, and MUST
+treat a missing `features`, a `features` that is not an object, a missing key, or a value that is
+not a number with an integral value of at least 1, as "not supported". Optional features never
+change `v`: that stays the major version carried by the namespace UUID (§3.1). Feature names
+defined so far:
+
+| Name | Feature | Versions |
+|---|---|---|
+| `negotiation` | Trade negotiation (§6.5); the version is its message format | 1 |
+
+A device that implements none of them MAY omit `features`.
 
 `Info` is the one **bidirectional** characteristic: the central reads the peripheral's, and writes
 its own. An earlier draft had it read-only, which left the peripheral holding a completed exchange
@@ -793,6 +820,381 @@ prevention of it.
 honest claim is bounded, reciprocal disclosure of a small slice — not confidentiality. Any product
 copy promising more than that is wrong.
 
+### 6.5 Trade negotiation (optional feature `negotiation`, format 1)
+
+After §6.3 two people know *that* they can trade. This optional feature lets them agree *what* to
+trade, phone to phone: one side sends a **suggestion** (cards to give and to get, with quantities),
+the other accepts it, declines it or answers with a changed one, and either may call it off. It is
+structured data, not chat: no free text travels (§1, §8). An implementation without this feature
+is a complete implementation of v1; nothing in §§3–6.4 depends on it, and nothing in it changes
+§§3–6.4 on the wire.
+
+Everything in §6.5 is normative except values explicitly given as **reference values**, which are
+tuning in the same sense as §6.3's timeouts. [`reference.py`](reference.py) implements the codecs,
+the hash resolution and the state machine (§6.5.11), and
+[`vectors/negotiation-v1.json`](vectors/negotiation-v1.json) pins them down.
+
+#### 6.5.1 The `Negotiation` characteristic
+
+| Characteristic | UUID | Properties |
+|---|---|---|
+| `Negotiation` | `a2ec42c3-94c1-594e-9297-00f4778f2915` | read + write (with response) |
+
+Derived exactly like the others (§6.1):
+`UUIDv5(PROTOCOL_NAMESPACE_UUID, "characteristic:Negotiation")`. It lives in the same per-game
+service as the §6.1 characteristics. An implementation that supports the feature MUST include it in
+the service while trading; one that does not MUST NOT.
+
+- **Write** = one negotiation message (§6.5.4), at most 512 bytes. A central MUST write with
+  response; a peripheral answers a write without response with the ATT error `writeNotPermitted`.
+- **Read** = the **receipt** (§6.5.7) for the last message *this central* wrote *on this
+  connection*, or an empty value before any write. A peripheral keeps one receipt per connection;
+  a later write on the same connection replaces it.
+- The peripheral validates the message, applies it and stores the receipt **before** it responds to
+  the write, so a completed write means the receipt exists. This is the `MyCandidates` →
+  `Confirmed` pattern of §6.3 step 4, for the same reasons; in particular there are no
+  notifications (§6.3, "`Confirmed` is read, not notified").
+- ATT errors are used for transport faults only: `invalidAttributeValueLength` for an empty value,
+  a value over 512 bytes, or a format-1 value shorter than its 52-byte header (§6.5.6). Every other
+  outcome, including every rejection, travels in the receipt. No custom ATT error codes are used.
+
+A message never needs more than one attribute value: the largest is 494 bytes (§6.5.4), so there is
+no app-level chunking or framing. A value longer than MTU − 3 is an ordinary ATT long (prepared)
+write, which the platform stacks perform transparently up to 512 bytes; a receipt (21 bytes) fits
+one read even at the minimum MTU.
+
+#### 6.5.2 Feature discovery and format
+
+A device declares the feature in its `Info` (§6.1) as `"features": { "negotiation": N }`, where `N`
+is the highest negotiation **format** it implements. This document defines format 1; every
+implementation of the feature MUST accept format 1.
+
+- A sender learns support from the peer's `Info` before it offers the feature to its user. The
+  definitive check is the characteristic's presence at delivery time (§6.5.3), which also covers a
+  peer whose `Info` was never read.
+- A sender uses `format = min(own highest, peer's N)`.
+- A receiver that gets a message in a format it does not implement answers `UNSUPPORTED_FORMAT`
+  with `detail` = the highest format it implements.
+- New fields or message types are added only by a new format. There are no extension bytes, which
+  keeps the exact-length checks of §6.5.4 strict.
+
+#### 6.5.3 Delivery
+
+**The sender of a message is always the BLE central, over a fresh short connection per message.**
+No connection is held open for a negotiation: human think time is minutes, and holding links would
+contradict §6.3 ("do not hold the connection open") and use up the small number of connection
+slots. Both devices keep advertising and serving GATT while trading (§2), so either can reach the
+other at any time.
+
+Sequence for one message:
+
+1. Find the peer's peripheral (below) and connect.
+2. Discover the service and its characteristics on every connection (a peer's GATT table can
+   change between connections; do not rely on a cache). If `Negotiation` is absent, the result is
+   **unsupported**: disconnect and tell the user (§6.5.9).
+3. Read `Info`. If its `id` is not the peer's session id, disconnect and try the next candidate.
+4. Write own `Info` (as §6.3 step 2). This binds the connection to the sender's session id; the
+   receiver checks the message's `from` against it (§6.5.6).
+5. Write the message to `Negotiation`, with response.
+6. Read `Negotiation`: the receipt. Disconnect after the read completes, not before (§6.3 step 7).
+
+**Finding the peer by session id.** The receiver is identified only by its session id (§6.1), so the
+sender finds its peripheral by reading `Info.id`: first at a platform handle it already associates
+with that id (from an earlier exchange or delivery), then by scanning for the service UUID and
+reading `Info` from advertisers not already known to belong to another session id. This scan MUST
+NOT apply the filters of the discovery path (an RSSI floor, the §3.2 filter test, reconnect
+cooldowns): the peer is already matched. Not found → **unreachable**; tell the user (§6.5.9).
+Reference values: try a known handle for at most 5 s (platform addresses rotate), then scan for at
+most 8 s with at most 6 probe connections; 10 s to connect and 10 s for steps 2–6; at most 25 s
+for a whole delivery attempt including the search; one automatic retry after 2 s, then the user
+decides. A retry sends the identical bytes (§6.5.8, Rule 3).
+
+A device delivers one message at a time per negotiation: the next message waits until the previous
+one's receipt has been read or its delivery has failed ("one outbox"). Only a `CANCEL` may replace
+a message whose delivery is still in progress. Deliveries share the central's connection slots and
+SHOULD take priority over new discovery connections; a device SHOULD NOT open a second connection
+to a device it is already connected to for an exchange, but wait for that exchange to finish.
+
+**Session id stability.** A receiver checks a message's `to` against its own session id, so a new
+session id ends every negotiation addressed to the old one. A device MUST NOT generate a new session
+id (§6.1) while it has a negotiation in state `SENT`, `RECEIVED`, `DECLINED_BY_ME`,
+`DECLINED_BY_PEER` or `ACCEPTING` (§6.5.8). Otherwise §6.1 is unchanged: when no negotiation is
+open, a new trading session still gets a new id.
+
+#### 6.5.4 Messages
+
+Binary, big-endian. Every message starts with a 52-byte header:
+
+| Offset | Size | Field |
+|---|---|---|
+| 0 | 1 | `format`: `0x01` |
+| 1 | 1 | `type`: `0x01` SUGGEST, `0x02` ACCEPT, `0x03` DECLINE, `0x04` CANCEL; any other value is `MALFORMED` |
+| 2 | 16 | `negotiationId`: chosen at random (a version-4 UUID, RFC 4122 byte order) by the sender of revision 1. Receivers treat it as 16 opaque bytes. |
+| 18 | 16 | `from`: the sender's session id (its `Info.id`, §6.1), as the UUID's 16 bytes |
+| 34 | 16 | `to`: the receiver's session id, as learned from its `Info` |
+| 50 | 2 | `revision`: unsigned, 1..65535; 0 is `MALFORMED` |
+| 52 | … | body, by type |
+
+Bodies:
+
+- **SUGGEST**: `giveCount` (1 byte), `getCount` (1 byte), then `giveCount + getCount` **lines** of
+  11 bytes, give lines first. Total length exactly `54 + 11 × (giveCount + getCount)`, with
+  `1 ≤ giveCount + getCount ≤ 40`; at 40 lines, 494 bytes. Give and get are **from the sender's
+  point of view**: the sender's give is what the receiver gets. Either side may be empty, not both.
+- **ACCEPT**: `digest`, 8 bytes: the 64-bit FNV-1a (§5.2) of the accepted SUGGEST's body (offset 52
+  to the end) exactly as its author sent it. `revision` is the revision being accepted. 60 bytes.
+- **DECLINE**: `reason`, 1 byte: `0` = unspecified. Values 1–255 are reserved for later formats;
+  receivers MUST read an unknown value as 0. `revision` is the revision being declined. 53 bytes.
+- **CANCEL**: no body; `revision` is the latest revision the sender knows. 52 bytes.
+
+Any other length for the type is `MALFORMED`.
+
+A **line** (11 bytes):
+
+| Offset | Size | Field |
+|---|---|---|
+| 0 | 8 | `hash`: the card's 8-byte hash, exactly the §6.2 wire form |
+| 8 | 1 | `finish`: the zero-based index of the card's `finish` value in the definition file's `finishes` array (for `swu`: 0 = standard, 1 = foil). For a game whose `identifier.fields` has no `finish` field, 0. |
+| 9 | 1 | `quantity`: number of copies, 1..255. 0 is `MALFORMED`. An implementation's own screens MAY offer less, but it MUST accept the full range on receipt. |
+| 10 | 1 | `condition`: optional card condition grade, below. |
+
+`condition` is a single optional grade, per line, on a 7-grade scale:
+
+| Value | Grade |
+|---|---|
+| 0 | not stated |
+| 1 | Mint |
+| 2 | Near Mint |
+| 3 | Excellent |
+| 4 | Good |
+| 5 | Light Played |
+| 6 | Played |
+| 7 | Poor |
+
+Values 8–255 are reserved; a receiver MUST read an unknown value as 0 (it does not reject the
+line). A sender that does not track condition sends 0 on every line. *Informative:* an
+implementation using another grading scale maps it onto this one, for example a five-grade scale
+of Near Mint / Lightly Played / Moderately Played / Heavily Played / Damaged as 2 / 5 / 6 / 7 / 7.
+
+**Line identity is `(hash, condition)`.** The same card in two stated conditions is two lines.
+Within each side, lines MUST be strictly ascending by `hash` (as an unsigned 64-bit number), then
+by `condition`; so no `(hash, condition)` appears twice in one side. A sender that tracks more per
+line than the wire carries merges lines with the same `(hash, condition)` by adding their
+quantities before sending. Out-of-order or repeated lines are `MALFORMED`. The same card MAY appear
+on both sides.
+
+Nothing else is on the wire: no prices, no free text, no vendor fields. The sender's display name
+is not repeated in the message: the `Info` it writes on the same connection (§6.5.3 step 4)
+carries its `handle`, under the same rules as in §6.1.
+
+#### 6.5.5 Resolving cards
+
+A suggestion may contain any card, not just cards on the receiver's own lists, so a receiver
+resolves each line's `hash` against **every card identity it can display**: it builds a reverse
+table from the hash of each canonical identity in its catalog (canonicalized per §4.5, encoded per
+§5.5). Collisions are not expected (64-bit hashes, a catalog of thousands); an implementation
+SHOULD assert at build time that there are none.
+
+- If any `hash` in a SUGGEST is not in the table, the whole SUGGEST is refused with
+  `UNKNOWN_CARDS`, `detail` = the number of distinct unresolvable hashes. Nothing is shown to the
+  receiver's user: accepting a trade one cannot fully see is never right. The sender is told.
+- Once every hash resolves, a line whose `finish` byte disagrees with the resolved identity's finish
+  is `MALFORMED`. The hash alone decides the card; `finish` is a cross-check. (A foil is never
+  derived by flipping a field, §4.4.1.)
+- A receiver presents a suggestion **mirrored**: the sender's give lines are what the receiver
+  gets, and vice versa.
+
+The `finish` byte puts the order of a definition file's `finishes` array on the wire, which is why
+that array is append-only (§4.2, §4.6 rule 6).
+
+#### 6.5.6 Receiving a message
+
+A peripheral judges a written value in this order and stops at the first failure:
+
+1. Empty, or longer than 512 bytes: ATT error `invalidAttributeValueLength`, no receipt.
+2. `format` (byte 0) greater than the highest format implemented: `UNSUPPORTED_FORMAT`; format 0:
+   `MALFORMED`. These are judged before the length, since another format's layout is unknown.
+3. Shorter than the 52-byte header: ATT error `invalidAttributeValueLength`, no receipt.
+4. Structure (§6.5.4): `type`, `revision` ≠ 0, line count, exact length, quantities, line order,
+   and each `finish` byte within the definition's `finishes`: else `MALFORMED`.
+5. `to` is not the receiver's session id: `NOT_FOR_ME` (the wrong device, or a peer that started a
+   new trading session).
+6. `from` is not the session id of a peer with which the receiver completed a §6.3 exchange in its
+   current trading session (a current match), or is not the `id` of the `Info` the central wrote on
+   this connection (or none was written): `UNKNOWN_PEER`.
+7. Rate limits (§6.5.8): `RATE_LIMITED`.
+8. For a SUGGEST, card resolution (§6.5.5): `UNKNOWN_CARDS`, then `MALFORMED`.
+9. The state machine (§6.5.8).
+
+Nothing refused in steps 1–8 is shown to the user or changes any state.
+
+A receipt echoes the message's `negotiationId` and `revision` from its header. For a refusal in
+step 2 (where the header's layout is not known) both are zero.
+
+#### 6.5.7 Receipts
+
+21 bytes, read from `Negotiation` (§6.5.1):
+
+| Offset | Size | Field |
+|---|---|---|
+| 0 | 1 | `format`: `0x01` |
+| 1 | 1 | `status`, below |
+| 2 | 16 | `negotiationId`, echoed (§6.5.6) |
+| 18 | 2 | `revision`, echoed |
+| 20 | 1 | `detail`: see the status; otherwise 0 |
+
+| Status | Name | Meaning |
+|---|---|---|
+| `0x00` | `OK` | Applied. |
+| `0x01` | `DUPLICATE` | This exact message was already applied (a retry after a lost receipt). The sender treats it as `OK`. |
+| `0x02` | `SUPERSEDED` | The receiver holds a newer or winning suggestion; this one was dropped. |
+| `0x03` | `STALE` | ACCEPT or DECLINE of a revision that is not the receiver's current pending suggestion. |
+| `0x04` | `CLOSED` | The negotiation is unknown to the receiver or has ended (accepted, cancelled or expired). |
+| `0x05` | `NOT_FOR_ME` | `to` is not the receiver's session id. |
+| `0x06` | `UNKNOWN_PEER` | `from` is not a current match, or not the `Info.id` written on this connection. |
+| `0x07` | `UNKNOWN_CARDS` | `detail` = number of distinct hashes the receiver cannot resolve. |
+| `0x08` | `BUSY` | The receiver limits concurrent negotiations and is at its limit. |
+| `0x09` | `RATE_LIMITED` | Too many messages from this peer. |
+| `0x0A` | `MALFORMED` | Fails §6.5.4 or the finish cross-check of §6.5.5. |
+| `0x0B` | `UNSUPPORTED_FORMAT` | `detail` = the highest format the receiver implements. |
+
+Statuses `0x0C`–`0xFF` are reserved. Only `OK` and `DUPLICATE` mean "delivered"; a sender MUST
+treat any other status, an unknown status, a value that is not 21 bytes or a receipt in an unknown
+format as a failed delivery. An empty read means the write did not happen.
+
+#### 6.5.8 State machine
+
+A device keeps, per negotiation and in memory only: its `negotiationId`, the peer's session id, the
+highest `revision` seen, the **current** suggestion (its revision, its author — this device or the
+peer —, its body bytes and digest), the state, the time of the last message in either direction,
+the last message applied from the peer (for Rule 3), and the one message being delivered.
+
+**States.** `SENT` (my suggestion is current and unanswered), `RECEIVED` (theirs is current and
+unanswered), `DECLINED_BY_ME`, `DECLINED_BY_PEER`, `ACCEPTING` (I sent ACCEPT and have no receipt
+yet), and the terminal `ACCEPTED`, `CANCELLED`, `EXPIRED`. Before any negotiation, a device is
+`IDLE`. The first four are **open**; open states and `ACCEPTING` are **live**. A user editing a
+reply is a UI mode on top of these, not a state; whether a delivery is in progress or failed is an
+overlay, not a state.
+
+**Rule 1: commit, then deliver.** A local action changes local state first and then delivers its
+message. Incoming messages are judged against that state, one at a time and serialized with local
+actions. This makes the author of the current suggestion the sole arbiter of its acceptance: an
+ACCEPT is applied only if the suggestion it names is still current when it arrives.
+
+**Rule 2: tie-break.** When two SUGGESTs compete at the same revision (both changed it at once, or
+both opened a negotiation with each other at once under different ids), the one whose author's
+session id is numerically smaller, as 16 unsigned bytes, wins; across negotiation ids, a higher
+revision wins first. Both devices compute the same winner.
+
+**Rule 3: duplicates.** A message byte-identical to the last message applied from the same peer in
+the same negotiation is answered `DUPLICATE` and changes nothing. This is judged before everything
+else in this section, so a retry after a lost receipt is recognized even when the message it
+repeats ended the negotiation.
+
+Local actions:
+
+| Action | Allowed in | Next state | Sends |
+|---|---|---|---|
+| L1 Send a suggestion | `IDLE` or terminal (a new negotiation: new random id, revision 1), or an open state (revision + 1, same id) | `SENT` | SUGGEST |
+| L2 Accept | `RECEIVED` | `ACCEPTING` | ACCEPT of the current revision, with its digest |
+| L3 Decline | `RECEIVED` | `DECLINED_BY_ME` | DECLINE of the current revision |
+| L4 End the negotiation | live | `CANCELLED` | CANCEL, best effort |
+| L5 The trading session is stopped by the user, or the app terminates | live | `CANCELLED` | CANCEL, best effort (not when the app is merely paused or backgrounded) |
+| L6 No message in either direction for the idle timeout, or the peer's match is removed | live | `EXPIRED` | CANCEL, best effort |
+
+L1–L3 wait for the previous message's delivery (§6.5.3, one outbox). While a negotiation is live,
+L1 for a different peer is refused locally; a device MAY support several negotiations at once, and
+then keeps this state per negotiation.
+
+Receipt for one's own ACCEPT, while `ACCEPTING`: `OK` or `DUPLICATE` → `ACCEPTED`; `STALE` → back
+to `RECEIVED` (a newer suggestion is current, or will arrive); `CLOSED` → `CANCELLED`; anything else
+→ stay `ACCEPTING`, delivery failed, the user may retry. Receipts for other messages change no
+state; they are shown to the user (§6.5.9).
+
+Incoming messages that passed §6.5.6 steps 1–8, in this order:
+
+| Message | Condition | Next state | Receipt |
+|---|---|---|---|
+| any | Rule 3 | unchanged | `DUPLICATE` |
+| any | its `negotiationId` names a negotiation this device has ended | unchanged | `CLOSED` |
+| SUGGEST | no live negotiation | `RECEIVED` (a new negotiation under its id) | `OK` |
+| SUGGEST | live negotiation with another peer, at the receiver's limit | unchanged | `BUSY` |
+| SUGGEST | same id, `revision` > highest seen | `RECEIVED` | `OK` (replaces my suggestion, theirs, a decline, or my ACCEPT in flight) |
+| SUGGEST | same id, same revision, current is theirs with the same digest | unchanged | `DUPLICATE` |
+| SUGGEST | same id, same revision, state `SENT`, and theirs wins Rule 2 | `RECEIVED` | `OK` |
+| SUGGEST | same id, otherwise | unchanged | `SUPERSEDED` |
+| SUGGEST | another id from the peer of my live negotiation, and theirs wins Rule 2 on (revision, author; if both are the peer's, theirs) | `RECEIVED`, under their id | `OK` |
+| SUGGEST | another id from that peer, otherwise | unchanged | `SUPERSEDED` |
+| ACCEPT, DECLINE, CANCEL | not my live negotiation with this peer | unchanged | `CLOSED` |
+| CANCEL | live | `CANCELLED` | `OK` |
+| ACCEPT | state `SENT`, current is mine, same revision, same digest | `ACCEPTED` | `OK` |
+| DECLINE | state `SENT`, current is mine, same revision | `DECLINED_BY_PEER` | `OK` |
+| ACCEPT, DECLINE | otherwise | unchanged | `STALE` |
+
+Who may send what follows from the table: a SUGGEST by either side in any open state (including
+changing one's own unanswered suggestion), ACCEPT and DECLINE only by the side that did not author
+the current suggestion and only for its revision, CANCEL by either side. `ACCEPTED` is terminal for
+the wire: from then on each user only confirms, or does not, the change to their own records
+(§6.5.9). A CANCEL arriving after that gets `CLOSED` and changes nothing.
+
+How the rules resolve the races:
+
+- **Both send a SUGGEST at once.** Rule 2. The loser's sender gets `SUPERSEDED`; it has received,
+  or will receive on retry, the winning suggestion.
+- **An ACCEPT crosses a change.** A replaces its revision 5 with revision 6 while B accepts 5. If A
+  committed 6 first, B's ACCEPT is `STALE` and B is shown 6. If A applied the ACCEPT first, A is
+  `ACCEPTED` and can no longer change revision 5.
+- **A receipt is lost.** The sender retries the identical bytes and gets `DUPLICATE` (Rule 3). A
+  delivery is never assumed.
+- **Messages out of order** cannot happen between two devices (one outbox each); a message left
+  over from an earlier connection is caught by its revision.
+- **An ACCEPT is never confirmed.** If an ACCEPT's receipt never arrives, the acceptor stays
+  `ACCEPTING` until the idle timeout and then `EXPIRED`; the author may already be `ACCEPTED`. The
+  acceptor's user must be told that it is not known whether the peer recorded the accept; each user
+  still confirms their own change, and they are standing together.
+
+**Limits.** A device MAY limit how many negotiations it holds at once (`BUSY` beyond it). It SHOULD
+limit messages per peer (`RATE_LIMITED`), counting the messages that passed §6.5.6 steps 1–6;
+one answered `RATE_LIMITED` does not count.
+Reference values: idle timeout 10 minutes; at most 10 messages per peer per minute and at most one
+per second; one negotiation at a time.
+
+#### 6.5.9 What every implementation must show its user
+
+- The peer's display name is its `Info.handle`, under §6.1's rules for untrusted text.
+- **Nothing in the user's collection or records changes without that user's explicit confirmation
+  after an accept**, on that user's own device. An accept is agreement between the two people, not
+  an instruction to either device.
+- The user is told, rather than left waiting, when the peer cannot receive suggestions
+  (unsupported), cannot be reached, is busy, does not know some of the cards, declined, ended the
+  negotiation, or when the negotiation expired; and that nothing changed in their collection.
+- Suggestions are not private (§6.5.10); product text must not call them so.
+
+#### 6.5.10 Security
+
+- **Nothing is authenticated.** Session ids are readable by anyone nearby (§6.1), so a device in
+  range can send a suggestion or a CANCEL under a matched peer's id. The checks of §6.5.6 (a current
+  match, `from` equal to the `Info.id` written on the same connection, `to` equal to the receiver's
+  id) stop misdirected and stale messages, not a deliberate spoofer. The harm is bounded by
+  §6.5.9's confirmation requirement: a spoofed message can annoy, or end a negotiation, but never
+  change a collection. See §9.
+- **Size.** A message is at most 512 bytes and is checked for its exact length; at most 40 lines;
+  quantity at least 1; one stored receipt per connection. Rate limits as in §6.5.8.
+- **No new personal data.** The name shown is the existing `handle`. A suggestion discloses exactly
+  the cards in it, which its sender chose to send. Card hashes are not confidential (the catalog is
+  enumerable, §6.4).
+
+#### 6.5.11 Conformance
+
+[`reference.py`](reference.py) implements this section: `encode_message` / `decode_message`,
+`encode_receipt` / `decode_receipt`, `normalize_lines` (ordering and merging), `suggest_digest`,
+`mirror`, `wins_tie`, `negotiated_format` (feature discovery), `build_reverse_table` /
+`resolve_lines` (§6.5.5) and the state machine as a pure function, `step(config, state, event)`.
+[`vectors/negotiation-v1.json`](vectors/negotiation-v1.json), generated from it with `swu` as the
+worked example, holds byte vectors for every message type and receipt status, rejected inputs,
+feature-discovery cases, and scenarios: sequences of events for two or three devices with the
+output and state each must produce, written as plain data so they can be replayed in any language.
+
 ## 7. Proximity filtering and match ranking
 
 ### 7.1 RSSI is a pre-connect filter, not a ranking signal
@@ -829,7 +1231,8 @@ physically locate each other. This must:
 For a quick reference when reviewing an implementation against this spec, these are deliberate
 absences, not gaps to fill in without a product decision first:
 - No push notifications, no background operation.
-- No chat.
+- No chat. The optional negotiation feature (§6.5) carries structured trade suggestions and their
+  answers only; there is no free text in it.
 - No accounts, no real identity — only a self-chosen display handle, and a random per-session id
   used solely to recognize a peer across the two roles (§6.1).
 - No platform-specific transport (MultipeerConnectivity, Nearby Connections) in v1 — BLE only.
@@ -871,3 +1274,10 @@ Tracked here rather than silently assumed:
   also advertise a Want list it has no intention of honoring. This is acceptable for
   a protocol whose output is "go talk to that person", but it must not be extended toward anything
   resembling an unattended or committed trade without revisiting it.
+- The negotiation feature (§6.5) inherits this. Because session ids are readable by anyone nearby,
+  a device can send a trade suggestion, an answer or a cancellation under the session id of a peer
+  the receiver has matched with. It cannot change anyone's collection: §6.5.9 requires the user's
+  own confirmation after every accept, and that requirement is what keeps negotiation inside "go
+  talk to that person". The accepted risk is a nuisance (an unwanted suggestion, a negotiation ended
+  by someone else), as for `handle` and `id` above. Authenticating peers would need key exchange,
+  which nothing in v1 has.
