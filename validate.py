@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contribution-time validation for Open TCG Trade Protocol definition files.
+"""Contribution-time validation for OTTO (Open TCG Trading Over-the-air) definition files.
 
 Checks the rules SPEC.md 4.6 lists as ones the JSON Schema structurally cannot enforce on its own,
 plus the canonicalization invariants of SPEC.md 4.4.2/4.5 that the same argument applies to. Run

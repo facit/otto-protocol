@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Executable reference implementation of the Open TCG Trade Protocol, v1.
+"""Executable reference implementation of the OTTO (Open TCG Trading Over-the-air), v1.
 
 This is the tie-breaker for the parts of SPEC.md where prose and code can drift: canonicalization
 (4.5), the canonical byte encoding (5.5), the hash and bit derivation (5.2), and the filter itself.

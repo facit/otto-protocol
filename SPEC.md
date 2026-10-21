@@ -1,4 +1,4 @@
-# Open TCG Trade Protocol — v1 (Draft)
+# OTTO — Open TCG Trading Over-the-air — v1 (Draft)
 
 A vendor-neutral, offline, peer-to-peer protocol for two people to discover that they can trade
 physical trading-card-game cards, using nothing but Bluetooth Low Energy. Designed to be
