@@ -15,8 +15,8 @@ revision, which this script does not have — it needs the diff, so it belongs i
 already knows the base revision, not here. Nothing below enforces it; do not read a green run as
 covering it.
 
-    python3 trade-protocol/validate.py                 # every file in definitions/
-    python3 trade-protocol/validate.py path/to/x.json  # just this one
+    python3 validate.py                 # every file in definitions/
+    python3 validate.py path/to/x.json  # just this one
 
 Exits non-zero if any file fails.
 """

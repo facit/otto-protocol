@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """Generate conformance test vectors from reference.py.
 
-Run from the repository root:  python3 trade-protocol/make_vectors.py
+Run from anywhere:  python3 make_vectors.py [--check]
 
 The output (vectors/swu-v1.json) is committed. Regenerate it only when the protocol's encoding or
 parameters change, and treat any unexplained diff in the regenerated file as a protocol break, not
 a refresh — the whole point of the vectors is that these bytes do not move.
 
-Real card identities are derived from the SWUScan reference catalog so the false-positive vector
-exercises the hash against genuine data rather than synthetic strings.
+Real card identities come from testdata/swu-catalog-sample.json, a vendored sample of a real
+catalog, so the false-positive vector exercises the hash against genuine data rather than
+synthetic strings. Nothing outside this repository is read.
 """
 from __future__ import annotations
 
@@ -21,10 +22,9 @@ HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import reference as r  # noqa: E402
 
-ROOT = HERE.parent
+ROOT = HERE
 DEFN = HERE / "definitions" / "swu.json"
-MANIFEST = ROOT / "SWU scan" / "card_manifest.json"
-FINISHES = ROOT / "SWU scan" / "finish_map.json"
+SAMPLE = HERE / "testdata" / "swu-catalog-sample.json"
 
 d = r.Definition.load(DEFN)
 
@@ -32,53 +32,22 @@ d = r.Definition.load(DEFN)
 PROTOCOL_NAMESPACE = uuid.UUID("8a44bf6a-7c5c-40fa-84d1-f3a5ec791831")
 
 
-def catalog() -> list[dict]:
-    """Every SWUScan card expressed as a protocol identity.
+def catalog() -> tuple[list[dict], dict]:
+    """The vendored sample of real card identities, and the known-gap counts recorded with it.
 
-    The mapping the app will need in Swift, in miniature: a synthetic set code ("SOR-20") splits
-    into a printed code plus the printedTotal that distinguishes that print run, and finish comes
-    from finish_map rather than being assumed.
+    The sample lives in this repository (testdata/), so the vectors regenerate from the repository
+    alone. Every entry must already be canonical: a sample entry that is not is a broken test
+    fixture, not a card to skip.
     """
-    cards = json.loads(MANIFEST.read_text())["cards"]
-    fmap = json.loads(FINISHES.read_text())
-    out, skipped = [], {"non_numeric": 0, "unknown_finish": 0, "not_canonical": 0}
-
-    for card_id in cards:
-        set_part, number = card_id.split("/", 1)
-        if not number.isdigit():
-            skipped["non_numeric"] += 1        # tokens: T001 etc., see vectors' "known_gaps"
-            continue
-
-        code, total = set_part, None
-        if "-" in set_part:
-            base, suffix = set_part.rsplit("-", 1)
-            if suffix.isdigit():
-                code, total = base, int(suffix)
-        if total is None and d.code_is_shared(code):
-            # A shared printed code needs its total, and the app's cardId does not carry one for
-            # the mainline run — "SOR/005", not "SOR-252/005". It has to be joined from the
-            # catalog. Worth stating plainly because the Swift mapping layer inherits the same
-            # constraint: cardId alone cannot produce a protocol identity for a shared code.
-            total = cards[card_id].get("card_count") or None
-
-        entry = fmap.get(card_id, {})
-        if entry.get("dual"):
-            finishes = ["standard", "foil"]    # one number, both finishes (SPEC.md 4.4.1 "shared")
-        elif entry.get("foil") is None:
-            skipped["unknown_finish"] += 1
-            continue
-        else:
-            finishes = ["foil" if entry["foil"] else "standard"]
-
-        for finish in finishes:
-            ident = {"setCode": code, "collectorNumber": int(number), "finish": finish}
-            if total is not None:
-                ident["printedTotal"] = total
-            try:
-                out.append(r.canonicalize(ident, d))
-            except r.NotCanonical:
-                skipped["not_canonical"] += 1
-    return out, skipped
+    doc = json.loads(SAMPLE.read_text(encoding="utf-8"))
+    assert doc["game"] == d.game, f"{SAMPLE.name} is for {doc['game']!r}, not {d.game!r}"
+    out = []
+    for ident in doc["identities"]:
+        canon = r.canonicalize(ident, d)
+        assert canon == ident, f"{SAMPLE.name}: {ident!r} is not canonical"
+        out.append(canon)
+    gaps = doc["knownGaps"]
+    return out, {"non_numeric": gaps["tokensOutOfScope"], "unknown_finish": gaps["unknownFinish"]}
 
 
 def encoding_vector(identity: dict, note: str) -> dict:
@@ -155,7 +124,7 @@ def main() -> int:
     selftest_variant_key()
     cards, skipped = catalog()
     by_key = {json.dumps(c, sort_keys=True): c for c in cards}
-    print(f"catalog: {len(by_key)} distinct identities  (skipped {skipped})")
+    print(f"catalog sample: {len(by_key)} distinct identities  (recorded gaps {skipped})")
 
     encodings = [
         encoding_vector({"setCode": "SOR", "collectorNumber": 5, "printedTotal": 252,

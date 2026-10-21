@@ -16,6 +16,11 @@ implementable without guessing.
 | [`vectors/swu-v1.json`](vectors/swu-v1.json) | Conformance test vectors. Generated from `reference.py`. |
 | [`validate.py`](validate.py) | Checks a definition file against the rules §4.6 says the JSON Schema structurally cannot enforce. |
 | [`make_vectors.py`](make_vectors.py) | Regenerates the vectors; `--check` asserts they still match `reference.py`. |
+| [`testdata/swu-catalog-sample.json`](testdata/swu-catalog-sample.json) | A small vendored sample of real card identities that `make_vectors.py` builds the vectors from. Test data, not a catalog. |
+| [`check_app_bundle.py`](check_app_bundle.py) | App tooling, not part of the protocol: `python3 check_app_bundle.py /path/to/app-repo` checks that an app's bundled copies of the definition and vectors are byte-identical to the files here. |
+
+Everything here runs from this repository alone with a stock Python 3 (no packages; `validate.py`
+additionally uses `jsonschema` when it is installed).
 
 ## If you are implementing this
 
@@ -46,8 +51,8 @@ Work in this order:
 One per game, validating against the schema. To add a game or correct one:
 
 ```bash
-python3 trade-protocol/validate.py                 # all definition files
-python3 trade-protocol/make_vectors.py --check     # vectors still match the reference
+python3 validate.py                 # all definition files
+python3 make_vectors.py --check     # vectors still match the reference
 ```
 
 Both belong in CI. `validate.py` does not implement §4.6 rule 6 (`definitionVersion` increased, no
